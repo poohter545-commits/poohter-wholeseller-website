@@ -5,3 +5,6 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    envVars:
+      - key: EXPO_PUBLIC_API_URL
+        value: https://api.poohter.com
