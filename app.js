@@ -49,8 +49,15 @@ const hideSignupAlert = () => {
 
 const api = async (path, options = {}) => {
   const headers = options.headers ? { ...options.headers } : {};
-  if (state.token) headers.Authorization = `Bearer ${state.token}`;
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (state.token && options.auth !== false) headers.Authorization = `Bearer ${state.token}`;
+  const requestOptions = { ...options, headers };
+  delete requestOptions.auth;
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, requestOptions);
+  } catch (error) {
+    throw new Error("Cannot connect to Poohter API. Please refresh the page and try again.");
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || data.message || "Request failed");
   return data;
@@ -315,6 +322,7 @@ on("#loginForm", "submit", async (event) => {
   try {
     const result = await api("/wholesaler/login", {
       method: "POST",
+      auth: false,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
     });
@@ -334,7 +342,7 @@ on("#signupForm", "submit", async (event) => {
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
-    await api("/wholesaler/register", { method: "POST", body: formData });
+    await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
     event.currentTarget.reset();
     showSignupAlert(
       "success",
