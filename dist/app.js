@@ -345,13 +345,14 @@ on("#loginForm", "submit", async (event) => {
 
 on("#signupForm", "submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
   hideSignupAlert();
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
     await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
-    event.currentTarget.reset();
+    form.reset();
     showSignupAlert(
       "success",
       "Registration submitted successfully",
