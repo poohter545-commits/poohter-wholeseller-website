@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poohter Wholesaler Center</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="auth-screen" id="authScreen">
+      <div class="auth-panel">
+        <div class="brand-block">
+          <span class="brand-mark">P</span>
+          <div>
+            <strong>POOHTER</strong>
+            <p>Wholesaler Center</p>
+          </div>
+        </div>
+
+        <div class="mode-switch">
+          <button class="mode active" id="loginMode" type="button">Login</button>
+          <button class="mode" id="signupMode" type="button">Register</button>
+        </div>
+
+        <form class="auth-form" id="loginForm">
+          <h1>Wholesaler Sign In</h1>
+          <p class="muted">Admin-approved wholesalers can upload supply products and accept seller purchase requests.</p>
+          <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
+          <label>Password <input name="password" type="password" required placeholder="Whole@123" /></label>
+          <button class="primary-btn" type="submit">Open Dashboard</button>
+          <span class="hint">Demo account: wholesale@poohter.local / Whole@123</span>
+        </form>
+
+        <form class="auth-form hidden" id="signupForm">
+          <h1>Create Wholesaler Account</h1>
+          <div class="form-grid compact">
+            <label>Owner name <input name="name" required /></label>
+            <label>Email <input name="email" type="email" required /></label>
+            <label>Password <input name="password" type="password" required /></label>
+            <label>Confirm password <input name="confirmPassword" type="password" required /></label>
+            <label>Phone <input name="phone" required /></label>
+            <label>Shop name <input name="shop_name" required /></label>
+            <label>Business type <input name="business_type" placeholder="Textile, electronics, grocery..." /></label>
+            <label>City <input name="city" required /></label>
+            <label class="wide">Warehouse address <input name="warehouse_address" /></label>
+            <label>CNIC number <input name="cnic_number" required placeholder="xxxxx-xxxxxxx-x" /></label>
+            <label>CNIC front <input name="cnic_front" type="file" accept="image/png,image/jpeg" /></label>
+            <label>CNIC back <input name="cnic_back" type="file" accept="image/png,image/jpeg" /></label>
+            <label>Bank name <input name="bank_name" /></label>
+            <label>Account title <input name="account_title" /></label>
+            <label>Account / IBAN <input name="account_number" /></label>
+            <label>Mobile wallet <input name="mobile_wallet" /></label>
+          </div>
+          <button class="primary-btn" type="submit">Submit For Admin Approval</button>
+        </form>
+      </div>
+    </section>
+
+    <div class="app hidden" id="appShell">
+      <aside class="sidebar">
+        <a class="brand-link" href="#overview">
+          <span class="brand-mark">P</span>
+          <span>Wholesaler</span>
+        </a>
+        <nav class="nav">
+          <a class="active" href="#overview">Overview</a>
+          <a href="#products">Products</a>
+          <a href="#orders">Seller Orders</a>
+          <a href="#add">Add Product</a>
+          <a href="#payouts">Payouts</a>
+          <a href="#profile">Profile</a>
+        </nav>
+        <button class="logout" id="logoutBtn" type="button">Logout</button>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Supply Operations</span>
+            <h1 id="shopTitle">Wholesaler dashboard</h1>
+            <p id="shopSubtitle">Connected to Poohter backend</p>
+          </div>
+          <button class="outline-btn" id="refreshBtn" type="button">Refresh</button>
+        </header>
+
+        <section class="metrics" id="overview">
+          <article><span>Products</span><strong id="productCount">0</strong></article>
+          <article><span>Orders</span><strong id="orderCount">0</strong></article>
+          <article><span>Awaiting Action</span><strong id="pendingCount">0</strong></article>
+          <article><span>Paid Instantly</span><strong id="paidTotal">Rs 0</strong></article>
+        </section>
+
+        <section class="panel" id="orders">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Seller Investment Requests</p>
+              <h2>Wholesale Orders</h2>
+            </div>
+            <span class="muted">Accept after admin approval to generate the warehouse PDF</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Order</th><th>Seller</th><th>Product</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="ordersList"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="products">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Supply Catalog</p>
+              <h2>My Wholesale Products</h2>
+            </div>
+          </div>
+          <div class="product-grid" id="productsList"></div>
+        </section>
+
+        <section class="panel" id="add">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">New Supply Product</p>
+              <h2>Add Product For Sellers</h2>
+            </div>
+            <span class="muted">Minimum order is 25 units and minimum 5 product photos are required</span>
+          </div>
+          <form class="form-grid" id="productForm">
+            <label>Product name <input name="name" required placeholder="Cotton t-shirts pack" /></label>
+            <label>Urdu name <input name="name_urdu" dir="rtl" /></label>
+            <label>Wholesale price <input name="wholesale_price" type="number" min="1" step="0.01" required /></label>
+            <label>Minimum order <input name="min_order_quantity" type="number" min="25" value="25" required /></label>
+            <label>Available stock <input name="available_stock" type="number" min="25" value="25" required /></label>
+            <label>Product photos <input name="product_images" type="file" accept="image/png,image/jpeg" multiple required /></label>
+            <label class="wide">Description <textarea name="description" required placeholder="Material, packing, supply condition, city, and wholesale details."></textarea></label>
+            <button class="primary-btn" type="submit">Publish Wholesale Product</button>
+          </form>
+        </section>
+
+        <section class="panel" id="payouts">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Payments</p>
+              <h2>Instant Payouts</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Payout</th><th>Order</th><th>Amount</th><th>Method</th><th>Paid</th></tr></thead>
+              <tbody id="payoutsList"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" id="profile">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Account</p>
+              <h2>Wholesaler Profile</h2>
+            </div>
+          </div>
+          <div class="profile-grid" id="profileGrid"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
