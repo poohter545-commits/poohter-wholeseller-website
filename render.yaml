@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: poohter-wholeseller-website
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start

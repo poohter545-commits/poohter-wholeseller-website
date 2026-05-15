@@ -5,6 +5,8 @@
   "description": "Poohter wholeseller website",
   "main": "server.js",
   "scripts": {
+    "build": "node -e \"console.log('Static site ready')\"",
+    "dev": "node server.js",
     "start": "node server.js"
   },
   "engines": {
