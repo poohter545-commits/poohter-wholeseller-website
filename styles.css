@@ -110,6 +110,34 @@ button, input, textarea, select { font: inherit; }
   font-weight: 700;
 }
 .hint { font-size: 13px; }
+.form-alert {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--brand);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: #f8fbff;
+  color: var(--ink);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+}
+.form-alert strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+.form-alert span {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.5;
+}
+.form-alert.success {
+  border-left-color: var(--good);
+  background: #effcf6;
+}
+.form-alert.error {
+  border-left-color: var(--danger);
+  background: #fff5f5;
+}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

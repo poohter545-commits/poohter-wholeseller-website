@@ -37,6 +37,20 @@ const showToast = (message, type = "") => {
   setTimeout(() => (toast.className = "toast"), 3200);
 };
 
+const showSignupAlert = (type, title, message) => {
+  const alert = $("#signupAlert");
+  if (!alert) return;
+  alert.className = `form-alert ${type}`;
+  alert.innerHTML = `<strong>${title}</strong><span>${message}</span>`;
+};
+
+const hideSignupAlert = () => {
+  const alert = $("#signupAlert");
+  if (!alert) return;
+  alert.className = "form-alert hidden";
+  alert.textContent = "";
+};
+
 const api = async (path, options = {}) => {
   const headers = options.headers ? { ...options.headers } : {};
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
@@ -319,16 +333,23 @@ on("#loginForm", "submit", async (event) => {
 
 on("#signupForm", "submit", async (event) => {
   event.preventDefault();
+  hideSignupAlert();
   const formData = new FormData(event.currentTarget);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
     await api("/wholesaler/register", { method: "POST", body: formData });
     event.currentTarget.reset();
-    $("#loginMode").click();
-    showToast("Registration sent. Admin approval is required before login.", "success");
+    showSignupAlert(
+      "success",
+      "Registration submitted successfully",
+      "Your wholesaler account has been sent for admin approval. Please wait until the Poohter admin team approves your account before logging in."
+    );
+    showToast("Registration sent for admin approval", "success");
   } catch (error) {
-    showToast(error.message, "error");
+    const message = error.message || "Registration failed. Please check your details and try again.";
+    showSignupAlert("error", "Registration could not be completed", message);
+    showToast(message, "error");
   }
 });
 
