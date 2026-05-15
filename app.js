@@ -1,4 +1,9 @@
-const API_BASE = "https://api.poohter.com/api";
+const API_HOST =
+  window.POOHTER_API_HOST ||
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:3000"
+    : "https://poohter-api.onrender.com");
+const API_BASE = `${API_HOST}/api`;
 const ASSET_BASE = API_BASE.replace("/api", "");
 
 const readJsonStorage = (key, fallback = null) => {
