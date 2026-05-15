@@ -1,5 +1,6 @@
 const API_HOST = (window.EXPO_PUBLIC_API_URL || "https://api.poohter.com").replace(/\/+$/, "");
 const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
+const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
 const ASSET_BASE = API_BASE.replace("/api", "");
 
 const readJsonStorage = (key, fallback = null) => {
@@ -52,15 +53,22 @@ const api = async (path, options = {}) => {
   if (state.token && options.auth !== false) headers.Authorization = `Bearer ${state.token}`;
   const requestOptions = { ...options, headers };
   delete requestOptions.auth;
-  let response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, requestOptions);
-  } catch (error) {
-    throw new Error("Cannot connect to Poohter API. Please refresh the page and try again.");
+
+  for (const [index, base] of API_BASES.entries()) {
+    const isLastAttempt = index === API_BASES.length - 1;
+    try {
+      const response = await fetch(`${base}${path}`, requestOptions);
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) return data;
+      if (response.status === 404 && !isLastAttempt) continue;
+      throw new Error(data.error || data.message || "Request failed");
+    } catch (error) {
+      if (!isLastAttempt && /Failed to fetch|NetworkError|Load failed/i.test(error.message || "")) continue;
+      if (error.message && error.message !== "Failed to fetch") throw error;
+    }
   }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || data.message || "Request failed");
-  return data;
+
+  throw new Error("Cannot connect to Poohter API. Please refresh the page and try again.");
 };
 
 const money = (value) => `Rs ${Math.round(Number(value || 0)).toLocaleString()}`;
