@@ -30,8 +30,24 @@
           <p class="muted">Admin-approved wholesalers can upload supply products and accept seller purchase requests.</p>
           <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
           <label>Password <input name="password" type="password" required placeholder="Whole@123" /></label>
+          <button class="text-link" id="forgotPassword" type="button">Forgot password?</button>
           <button class="primary-btn" type="submit">Open Dashboard</button>
           <span class="hint">Demo account: wholesale@poohter.local / Whole@123</span>
+        </form>
+
+        <form class="auth-form hidden" id="resetForm">
+          <h1>Reset Wholesaler Password</h1>
+          <p class="muted">We will send an OTP to your wholesaler email.</p>
+          <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
+          <div class="otp-panel hidden" id="resetOtpPanel">
+            <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
+            <label>New password <input name="password" type="password" minlength="6" /></label>
+            <label>Confirm password <input name="confirmPassword" type="password" minlength="6" /></label>
+          </div>
+          <div class="form-actions">
+            <button class="outline-btn" id="resetBack" type="button">Back</button>
+            <button class="primary-btn" id="resetSubmit" type="submit">Send Reset Code</button>
+          </div>
         </form>
 
         <form class="auth-form hidden" id="signupForm">
@@ -55,7 +71,11 @@
             <label>Account / IBAN <input name="account_number" /></label>
             <label>Mobile wallet <input name="mobile_wallet" /></label>
           </div>
-          <button class="primary-btn" type="submit">Submit For Admin Approval</button>
+          <div class="otp-panel hidden" id="signupOtpPanel">
+            <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
+            <p>Check your wholesaler email and enter the code to submit this application.</p>
+          </div>
+          <button class="primary-btn" id="signupSubmit" type="submit">Submit For Admin Approval</button>
         </form>
       </div>
     </section>

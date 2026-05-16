@@ -19,6 +19,8 @@ const state = {
   products: [],
   orders: [],
   payouts: [],
+  signupOtpPending: false,
+  resetOtpSent: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -46,6 +48,31 @@ const hideSignupAlert = () => {
   if (!alert) return;
   alert.className = "form-alert hidden";
   alert.textContent = "";
+};
+
+const showAuthMode = (mode) => {
+  $("#loginMode").classList.toggle("active", mode === "login");
+  $("#signupMode").classList.toggle("active", mode === "signup");
+  $("#loginForm").classList.toggle("hidden", mode !== "login");
+  $("#signupForm").classList.toggle("hidden", mode !== "signup");
+  $("#resetForm").classList.toggle("hidden", mode !== "reset");
+};
+
+const setSignupOtpMode = (enabled) => {
+  state.signupOtpPending = enabled;
+  $("#signupOtpPanel").classList.toggle("hidden", !enabled);
+  const otpInput = $("#signupOtpPanel input[name='otp']");
+  if (otpInput) otpInput.required = enabled;
+  $("#signupSubmit").textContent = enabled ? "Verify Email & Submit" : "Submit For Admin Approval";
+};
+
+const setResetOtpMode = (enabled) => {
+  state.resetOtpSent = enabled;
+  $("#resetOtpPanel").classList.toggle("hidden", !enabled);
+  $("#resetSubmit").textContent = enabled ? "Change Password" : "Send Reset Code";
+  $("#resetOtpPanel").querySelectorAll("input").forEach((input) => {
+    input.required = enabled;
+  });
 };
 
 const api = async (path, options = {}) => {
@@ -310,19 +337,20 @@ const loadDashboard = async () => {
   }
 };
 
-on("#loginMode", "click", () => {
-  $("#loginMode").classList.add("active");
-  $("#signupMode").classList.remove("active");
-  $("#loginForm").classList.remove("hidden");
-  $("#signupForm").classList.add("hidden");
-});
+on("#loginMode", "click", () => showAuthMode("login"));
 
 on("#signupMode", "click", () => {
-  $("#signupMode").classList.add("active");
-  $("#loginMode").classList.remove("active");
-  $("#signupForm").classList.remove("hidden");
-  $("#loginForm").classList.add("hidden");
+  setSignupOtpMode(false);
+  showAuthMode("signup");
 });
+
+on("#forgotPassword", "click", () => {
+  $("#resetForm input[name='email']").value = $("#loginForm input[name='email']").value;
+  setResetOtpMode(false);
+  showAuthMode("reset");
+});
+
+on("#resetBack", "click", () => showAuthMode("login"));
 
 on("#loginForm", "submit", async (event) => {
   event.preventDefault();
@@ -347,22 +375,93 @@ on("#signupForm", "submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   hideSignupAlert();
+  const submitButton = $("#signupSubmit");
+  const originalText = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP...";
   const formData = new FormData(form);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
-    await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
+    const result = state.signupOtpPending
+      ? await api("/wholesaler/register/verify", {
+        method: "POST",
+        auth: false,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.get("email"),
+          otp: formData.get("otp"),
+        }),
+      })
+      : await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
+    if (result.requiresOtp) {
+      setSignupOtpMode(true);
+      showSignupAlert("success", "Verification code sent", result.message || "Check your email for the OTP.");
+      showToast("OTP sent to your email", "success");
+      return;
+    }
     form.reset();
+    setSignupOtpMode(false);
     showSignupAlert(
       "success",
       "Registration submitted successfully",
-      "Your wholesaler account has been sent for admin approval. Please wait until the Poohter admin team approves your account before logging in."
+      result.message || "Your wholesaler account has been sent for admin approval. Please wait until the Poohter admin team approves your account before logging in."
     );
     showToast("Registration sent for admin approval", "success");
   } catch (error) {
     const message = error.message || "Registration failed. Please check your details and try again.";
     showSignupAlert("error", "Registration could not be completed", message);
     showToast(message, "error");
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = state.signupOtpPending ? "Verify Email & Submit" : originalText;
+  }
+});
+
+on("#resetForm", "submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const submitButton = $("#resetSubmit");
+  submitButton.disabled = true;
+  submitButton.textContent = state.resetOtpSent ? "Changing..." : "Sending...";
+  try {
+    const email = form.get("email");
+    if (!state.resetOtpSent) {
+      const result = await api("/auth/password/forgot", {
+        method: "POST",
+        auth: false,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, accountType: "wholesaler" }),
+      });
+      setResetOtpMode(true);
+      showToast(result.message || "Reset OTP sent to your email.", "success");
+      return;
+    }
+    if (form.get("password") !== form.get("confirmPassword")) {
+      showToast("Passwords do not match.", "error");
+      return;
+    }
+    const result = await api("/auth/password/reset", {
+      method: "POST",
+      auth: false,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        accountType: "wholesaler",
+        otp: form.get("otp"),
+        password: form.get("password"),
+        confirmPassword: form.get("confirmPassword"),
+      }),
+    });
+    event.currentTarget.reset();
+    setResetOtpMode(false);
+    showAuthMode("login");
+    showToast(result.message || "Password changed. Please login.", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    submitButton.disabled = false;
+    setResetOtpMode(state.resetOtpSent);
   }
 });
 
