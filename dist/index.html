@@ -41,6 +41,7 @@
           <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
           <div class="otp-panel hidden" id="resetOtpPanel">
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
+            <button class="resend-otp-btn" id="resetResendOtp" type="button" disabled>Resend OTP in 60s</button>
             <label>New password <input name="password" type="password" minlength="6" /></label>
             <label>Confirm password <input name="confirmPassword" type="password" minlength="6" /></label>
           </div>
@@ -74,6 +75,7 @@
           <div class="otp-panel hidden" id="signupOtpPanel">
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
             <p>Check your wholesaler email and enter the code to submit this application.</p>
+            <button class="resend-otp-btn" id="signupResendOtp" type="button" disabled>Resend OTP in 60s</button>
           </div>
           <button class="primary-btn" id="signupSubmit" type="submit">Submit For Admin Approval</button>
         </form>
