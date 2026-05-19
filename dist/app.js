@@ -19,6 +19,7 @@ const state = {
   products: [],
   orders: [],
   payouts: [],
+  signupStep: 1,
   signupOtpPending: false,
   resetOtpSent: false,
   otpTimers: {},
@@ -60,14 +61,54 @@ const showAuthMode = (mode) => {
   $("#resetForm").classList.toggle("hidden", mode !== "reset");
 };
 
+const setSignupStep = (step) => {
+  state.signupStep = Math.max(1, Math.min(4, step));
+  document.querySelectorAll("[data-signup-step]").forEach((section) => {
+    section.classList.toggle("active", Number(section.dataset.signupStep) === state.signupStep);
+  });
+  document.querySelectorAll("[data-step-pill]").forEach((pill) => {
+    const pillStep = Number(pill.dataset.stepPill);
+    pill.classList.toggle("active", pillStep === state.signupStep);
+    pill.classList.toggle("completed", pillStep < state.signupStep);
+  });
+  $("#signupPrev").classList.toggle("hidden", state.signupStep === 1 || state.signupOtpPending);
+  $("#signupNext").classList.toggle("hidden", state.signupStep === 4 || state.signupOtpPending);
+  $("#signupSubmit").classList.toggle("hidden", state.signupStep !== 4);
+};
+
+const validateSignupStep = () => {
+  const section = document.querySelector(`[data-signup-step="${state.signupStep}"]`);
+  if (!section) return true;
+
+  if (state.signupStep === 1) {
+    const password = $("#signupForm input[name='password']");
+    const confirmPassword = $("#signupForm input[name='confirmPassword']");
+    if (password.value !== confirmPassword.value) {
+      showToast("Passwords do not match.", "error");
+      confirmPassword.focus();
+      return false;
+    }
+  }
+
+  const fields = Array.from(section.querySelectorAll("input, textarea, select"));
+  const invalid = fields.find((field) => !field.checkValidity());
+  if (invalid) {
+    invalid.reportValidity();
+    return false;
+  }
+  return true;
+};
+
 const setSignupOtpMode = (enabled) => {
   const wasEnabled = state.signupOtpPending;
   state.signupOtpPending = enabled;
   $("#signupOtpPanel").classList.toggle("hidden", !enabled);
   const otpInput = $("#signupOtpPanel input[name='otp']");
   if (otpInput) otpInput.required = enabled;
+  if (enabled) setSignupStep(4);
   if (enabled && !wasEnabled) startOtpCooldown("signup");
   $("#signupSubmit").textContent = enabled ? "Verify Email & Submit" : "Submit For Admin Approval";
+  setSignupStep(state.signupStep);
 };
 
 const setResetOtpMode = (enabled) => {
@@ -154,6 +195,13 @@ const api = async (path, options = {}) => {
 };
 
 const money = (value) => `Rs ${Math.round(Number(value || 0)).toLocaleString()}`;
+const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#039;",
+}[character]));
 const uploadUrl = (path) => {
   if (!path) return "";
   if (String(path).startsWith("http")) return path;
@@ -268,6 +316,10 @@ const renderProfile = () => {
   const profile = state.profile?.wholesaler || state.wholesaler || {};
   $("#shopTitle").textContent = profile.shop_name || profile.name || "Poohter Wholesaler";
   $("#shopSubtitle").textContent = profile.email ? `${profile.email} - ${profile.city || "Wholesale account"}` : "Connected to Poohter backend";
+  $("#accountStatus").textContent = profile.status
+    ? `Account status: ${String(profile.status).replace(/_/g, " ")}`
+    : "Wholesaler profile connected";
+  $("#wholesalerAvatar").textContent = (profile.shop_name || profile.name || "P").charAt(0).toUpperCase();
   const fields = [
     ["Owner", profile.name],
     ["Shop", profile.shop_name],
@@ -282,7 +334,7 @@ const renderProfile = () => {
     ["Status", profile.status],
   ];
   $("#profileGrid").innerHTML = fields
-    .map(([label, value]) => `<div class="profile-item"><span>${label}</span><strong>${value || "Not provided"}</strong></div>`)
+    .map(([label, value]) => `<div class="profile-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not provided")}</strong></div>`)
     .join("");
 };
 
@@ -292,6 +344,7 @@ const renderMetrics = () => {
   $("#productCount").textContent = state.products.length;
   $("#orderCount").textContent = state.orders.length;
   $("#pendingCount").textContent = pending;
+  $("#attentionCount").textContent = pending;
   $("#paidTotal").textContent = money(paid);
 };
 
@@ -300,20 +353,26 @@ const renderProducts = () => {
     ? state.products
         .map((product) => {
           const image = uploadUrl(product.image_url);
+          const nextStatus = product.status === "paused" ? "active" : "paused";
           return `
             <article class="product-card">
-              <div class="product-media">${image ? `<img src="${image}" alt="${product.name}" />` : `<span>W</span>`}</div>
+              <div class="product-media">${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" />` : `<span>W</span>`}</div>
               <div class="product-card-body">
                 <div>
-                  <span class="muted">${product.product_uid || `Wholesale #${product.id}`}</span>
-                  <h3>${product.name}</h3>
-                  <p>${product.description || "No description provided."}</p>
+                  <span class="muted">${escapeHtml(product.product_uid || `Wholesale #${product.id}`)}</span>
+                  <h3>${escapeHtml(product.name)}</h3>
+                  <p>${escapeHtml(product.description || "No description provided.")}</p>
                 </div>
                 <div class="card-meta">
                   <span>${money(product.wholesale_price)}</span>
-                  <span>Min ${product.min_order_quantity}</span>
-                  <span>${product.available_stock} stock</span>
-                  <span>${product.status}</span>
+                  <span>Min ${Number(product.min_order_quantity || 0)}</span>
+                  <span>${Number(product.available_stock || 0)} stock</span>
+                  <span>${escapeHtml(product.status || "active")}</span>
+                </div>
+                <div class="product-actions">
+                  <button class="outline-btn" type="button" data-toggle-product="${product.id}" data-next-status="${nextStatus}">
+                    ${nextStatus === "active" ? "Activate" : "Pause"}
+                  </button>
                 </div>
               </div>
             </article>
@@ -328,15 +387,15 @@ const renderOrders = () => {
     ? state.orders
         .map((order) => `
           <tr>
-            <td><strong>${order.order_code}</strong><span>${order.linked_product_uid || "Product ID after acceptance"}</span></td>
-            <td><strong>${order.seller_shop || order.seller_name}</strong><span>${order.seller_phone || order.seller_email}</span></td>
-            <td><strong>${order.product_name}</strong><span>${order.quantity} x ${money(order.wholesale_unit_price)}</span></td>
+            <td><strong>${escapeHtml(order.order_code)}</strong><span>${escapeHtml(order.linked_product_uid || "Product ID after acceptance")}</span></td>
+            <td><strong>${escapeHtml(order.seller_shop || order.seller_name || "Seller")}</strong><span>${escapeHtml(order.seller_phone || order.seller_email || "")}</span></td>
+            <td><strong>${escapeHtml(order.product_name || "Product")}</strong><span>${Number(order.quantity || 0)} x ${money(order.wholesale_unit_price)}</span></td>
             <td><strong>${money(order.total_price)}</strong></td>
-            <td><span class="badge ${order.status}">${wholesaleStatusLabel(order.status)}</span></td>
+            <td><span class="badge ${escapeHtml(order.status)}">${escapeHtml(wholesaleStatusLabel(order.status))}</span></td>
             <td>
               <div class="row-actions">
-                ${order.status === "approved_by_admin" ? `<button class="mini-btn" data-accept="${order.id}">Accept</button><button class="outline-btn" data-reject="${order.id}">Reject</button>` : ""}
-                ${order.status === "accepted" ? `<button class="mini-btn" data-pdf="${order.id}">PDF</button>` : ""}
+                ${order.status === "approved_by_admin" ? `<button class="mini-btn" type="button" data-accept="${order.id}">Accept</button><button class="outline-btn" type="button" data-reject="${order.id}">Reject</button>` : ""}
+                ${order.status === "accepted" ? `<button class="mini-btn" type="button" data-pdf="${order.id}">PDF</button>` : ""}
               </div>
             </td>
           </tr>
@@ -350,10 +409,10 @@ const renderPayouts = () => {
     ? state.payouts
         .map((payout) => `
           <tr>
-            <td><strong>${payout.payout_code}</strong><span>${payout.status}</span></td>
-            <td>${payout.order_code}</td>
+            <td><strong>${escapeHtml(payout.payout_code)}</strong><span>${escapeHtml(payout.status || "paid")}</span></td>
+            <td>${escapeHtml(payout.order_code || "")}</td>
             <td><strong>${money(payout.amount)}</strong></td>
-            <td>${payout.method || "Instant wholesale payment"}</td>
+            <td>${escapeHtml(payout.method || "Instant wholesale payment")}</td>
             <td>${payout.paid_at ? new Date(payout.paid_at).toLocaleDateString() : "Paid"}</td>
           </tr>
         `)
@@ -396,6 +455,7 @@ on("#loginMode", "click", () => showAuthMode("login"));
 
 on("#signupMode", "click", () => {
   setSignupOtpMode(false);
+  setSignupStep(1);
   showAuthMode("signup");
 });
 
@@ -406,6 +466,14 @@ on("#forgotPassword", "click", () => {
 });
 
 on("#resetBack", "click", () => showAuthMode("login"));
+
+on("#signupNext", "click", () => {
+  if (validateSignupStep()) setSignupStep(state.signupStep + 1);
+});
+
+on("#signupPrev", "click", () => {
+  setSignupStep(state.signupStep - 1);
+});
 
 on("#loginForm", "submit", async (event) => {
   event.preventDefault();
@@ -428,6 +496,11 @@ on("#loginForm", "submit", async (event) => {
 
 on("#signupForm", "submit", async (event) => {
   event.preventDefault();
+  if (!state.signupOtpPending && state.signupStep < 4) {
+    if (validateSignupStep()) setSignupStep(state.signupStep + 1);
+    return;
+  }
+  if (!state.signupOtpPending && !validateSignupStep()) return;
   const form = event.currentTarget;
   hideSignupAlert();
   const submitButton = $("#signupSubmit");
@@ -528,11 +601,16 @@ on("#resetResendOtp", "click", () => resendOtp("reset"));
 on("#productForm", "submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+  const submitButton = event.submitter || form.querySelector("button[type='submit']");
   const formData = new FormData(form);
   const images = formData.getAll("product_images").filter((file) => file && file.size);
   if (images.length < 5) {
     showToast("Minimum 5 photos of wholesale product are required", "error");
     return;
+  }
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Publishing...";
   }
   try {
     await api("/wholesaler/products", { method: "POST", body: formData });
@@ -541,6 +619,11 @@ on("#productForm", "submit", async (event) => {
     showToast("Wholesale product published", "success");
   } catch (error) {
     showToast(error.message, "error");
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Publish Wholesale Product";
+    }
   }
 });
 
@@ -554,6 +637,10 @@ on("#ordersList", "click", async (event) => {
   }
   const id = accept?.dataset.accept || reject?.dataset.reject;
   if (!id) return;
+  const button = accept || reject;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = accept ? "Accepting..." : "Rejecting...";
   try {
     if (accept) {
       const result = await api(`/wholesaler/orders/${id}/accept`, { method: "POST" });
@@ -574,6 +661,41 @@ on("#ordersList", "click", async (event) => {
     }
   } catch (error) {
     showToast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
+
+on("#productsList", "click", async (event) => {
+  const button = event.target.closest("[data-toggle-product]");
+  if (!button) return;
+  const product = state.products.find((item) => String(item.id) === String(button.dataset.toggleProduct));
+  if (!product) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = button.dataset.nextStatus === "active" ? "Activating..." : "Pausing...";
+  try {
+    await api(`/wholesaler/products/${product.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: product.name,
+        name_urdu: product.name_urdu || "",
+        description: product.description || "",
+        wholesale_price: product.wholesale_price,
+        min_order_quantity: product.min_order_quantity,
+        available_stock: product.available_stock,
+        status: button.dataset.nextStatus,
+      }),
+    });
+    await loadDashboard();
+    showToast(`Product ${button.dataset.nextStatus === "active" ? "activated" : "paused"}`, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
   }
 });
 
@@ -591,5 +713,6 @@ document.querySelectorAll(".nav a").forEach((link) => {
   });
 });
 
+setSignupStep(1);
 showApp(Boolean(state.token));
 if (state.token) loadDashboard();

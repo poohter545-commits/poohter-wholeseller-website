@@ -4,48 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Poohter Wholesaler Center</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=20260519-wholesaler-ui" />
     <script src="env.js"></script>
   </head>
   <body>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <section class="auth-screen" id="authScreen">
-      <div class="auth-panel">
-        <div class="brand-block">
-          <span class="brand-mark">P</span>
-          <div>
-            <strong>POOHTER</strong>
-            <p>Wholesaler Center</p>
+      <div class="auth-card" id="authCard">
+        <div class="brand-header">
+          <div class="brand-row">
+            <span class="brand-mark">P</span>
+            <span>POOHTER</span>
           </div>
+          <p>A Trust Where Quality Matters</p>
         </div>
 
-        <div class="mode-switch">
+        <div class="mode-switch" role="tablist" aria-label="Authentication mode">
           <button class="mode active" id="loginMode" type="button">Login</button>
-          <button class="mode" id="signupMode" type="button">Register</button>
+          <button class="mode" id="signupMode" type="button">Sign Up</button>
         </div>
 
         <form class="auth-form" id="loginForm">
           <h1>Wholesaler Sign In</h1>
-          <p class="muted">Admin-approved wholesalers can upload supply products and accept seller purchase requests.</p>
-          <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
-          <label>Password <input name="password" type="password" required placeholder="Whole@123" /></label>
+          <p>Upload wholesale supply products and respond to seller investment requests.</p>
+          <label>Email <input name="email" type="email" required autocomplete="email" placeholder="wholesale@poohter.local" /></label>
+          <label>Password <input name="password" type="password" required autocomplete="current-password" placeholder="Password" /></label>
           <button class="text-link" id="forgotPassword" type="button">Forgot password?</button>
           <button class="primary-btn" type="submit">Open Dashboard</button>
-          <span class="hint">Demo account: wholesale@poohter.local / Whole@123</span>
         </form>
 
         <form class="auth-form hidden" id="resetForm">
           <h1>Reset Wholesaler Password</h1>
-          <p class="muted">We will send an OTP to your wholesaler email.</p>
-          <label>Email <input name="email" type="email" required placeholder="wholesale@poohter.local" /></label>
+          <p>We will send an OTP to your wholesaler email.</p>
+          <label>Email <input name="email" type="email" required autocomplete="email" placeholder="wholesale@poohter.local" /></label>
           <div class="otp-panel hidden" id="resetOtpPanel">
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
             <button class="resend-otp-btn" id="resetResendOtp" type="button" disabled>Resend OTP in 60s</button>
             <label>New password <input name="password" type="password" minlength="6" /></label>
             <label>Confirm password <input name="confirmPassword" type="password" minlength="6" /></label>
           </div>
-          <div class="form-actions">
+          <div class="signup-actions">
             <button class="outline-btn" id="resetBack" type="button">Back</button>
             <button class="primary-btn" id="resetSubmit" type="submit">Send Reset Code</button>
           </div>
@@ -53,44 +55,75 @@
 
         <form class="auth-form hidden" id="signupForm">
           <h1>Create Wholesaler Account</h1>
+          <p>Complete your wholesaler profile to submit for admin approval.</p>
           <div class="form-alert hidden" id="signupAlert" role="status" aria-live="polite"></div>
-          <div class="form-grid compact">
-            <label>Owner name <input name="name" required /></label>
-            <label>Email <input name="email" type="email" required /></label>
-            <label>Password <input name="password" type="password" required /></label>
-            <label>Confirm password <input name="confirmPassword" type="password" required /></label>
-            <label>Phone <input name="phone" required /></label>
-            <label>Shop name <input name="shop_name" required /></label>
-            <label>Business type <input name="business_type" placeholder="Textile, electronics, grocery..." /></label>
-            <label>City <input name="city" required /></label>
-            <label class="wide">Warehouse address <input name="warehouse_address" /></label>
-            <label>CNIC number <input name="cnic_number" required placeholder="xxxxx-xxxxxxx-x" /></label>
-            <label>CNIC front <input name="cnic_front" type="file" accept="image/png,image/jpeg" /></label>
-            <label>CNIC back <input name="cnic_back" type="file" accept="image/png,image/jpeg" /></label>
-            <label>Bank name <input name="bank_name" /></label>
-            <label>Account title <input name="account_title" /></label>
-            <label>Account / IBAN <input name="account_number" /></label>
-            <label>Mobile wallet <input name="mobile_wallet" /></label>
+          <div class="stepper" aria-label="Wholesaler registration steps">
+            <span class="step-pill active" data-step-pill="1">1<small>Basic</small></span>
+            <span class="step-pill" data-step-pill="2">2<small>Business</small></span>
+            <span class="step-pill" data-step-pill="3">3<small>Identity</small></span>
+            <span class="step-pill" data-step-pill="4">4<small>Payment</small></span>
           </div>
+
+          <div class="form-step active" data-signup-step="1">
+            <div class="form-grid compact">
+              <label>Owner name <input name="name" required autocomplete="name" /></label>
+              <label>Email <input name="email" type="email" required autocomplete="email" /></label>
+              <label>Password <input name="password" type="password" required autocomplete="new-password" /></label>
+              <label>Confirm password <input name="confirmPassword" type="password" required autocomplete="new-password" /></label>
+              <label>Phone <input name="phone" required autocomplete="tel" /></label>
+            </div>
+          </div>
+
+          <div class="form-step" data-signup-step="2">
+            <div class="form-grid compact">
+              <label>Shop name <input name="shop_name" required /></label>
+              <label>Business type <input name="business_type" placeholder="Textile, electronics, grocery..." /></label>
+              <label>City <input name="city" required /></label>
+              <label class="wide">Warehouse address <input name="warehouse_address" /></label>
+            </div>
+          </div>
+
+          <div class="form-step" data-signup-step="3">
+            <div class="form-grid compact">
+              <label>CNIC number <input name="cnic_number" required placeholder="xxxxx-xxxxxxx-x" /></label>
+              <label>CNIC front <input name="cnic_front" type="file" accept="image/png,image/jpeg" /></label>
+              <label>CNIC back <input name="cnic_back" type="file" accept="image/png,image/jpeg" /></label>
+            </div>
+          </div>
+
+          <div class="form-step" data-signup-step="4">
+            <div class="form-grid compact">
+              <label>Bank name <input name="bank_name" /></label>
+              <label>Account title <input name="account_title" /></label>
+              <label>Account / IBAN <input name="account_number" /></label>
+              <label>Mobile wallet <input name="mobile_wallet" /></label>
+            </div>
+          </div>
+
           <div class="otp-panel hidden" id="signupOtpPanel">
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
             <p>Check your wholesaler email and enter the code to submit this application.</p>
             <button class="resend-otp-btn" id="signupResendOtp" type="button" disabled>Resend OTP in 60s</button>
           </div>
-          <button class="primary-btn" id="signupSubmit" type="submit">Submit For Admin Approval</button>
+
+          <div class="signup-actions">
+            <button class="outline-btn hidden" id="signupPrev" type="button">Back</button>
+            <button class="primary-btn" id="signupNext" type="button">Continue</button>
+            <button class="primary-btn hidden" id="signupSubmit" type="submit">Submit For Admin Approval</button>
+          </div>
         </form>
       </div>
     </section>
 
     <div class="app hidden" id="appShell">
       <aside class="sidebar">
-        <a class="brand-link" href="#overview">
+        <a class="side-brand" href="#overview">
           <span class="brand-mark">P</span>
-          <span>Wholesaler</span>
+          <span>POOHTER</span>
         </a>
         <nav class="nav">
-          <a class="active" href="#overview">Overview</a>
-          <a href="#products">Products</a>
+          <a class="active" href="#overview">Dashboard</a>
+          <a href="#products">My Products</a>
           <a href="#orders">Seller Orders</a>
           <a href="#add">Add Product</a>
           <a href="#payouts">Payouts</a>
@@ -102,21 +135,35 @@
       <main class="main">
         <header class="topbar">
           <div>
-            <span class="eyebrow">Supply Operations</span>
+            <span class="top-kicker">Wholesaler Center</span>
             <h1 id="shopTitle">Wholesaler dashboard</h1>
             <p id="shopSubtitle">Connected to Poohter backend</p>
           </div>
-          <button class="outline-btn" id="refreshBtn" type="button">Refresh</button>
+          <div class="top-actions">
+            <button class="outline-btn" id="refreshBtn" type="button">Refresh</button>
+            <a class="primary-link" href="#add">Add Product</a>
+            <div class="avatar" id="wholesalerAvatar">P</div>
+          </div>
         </header>
 
-        <section class="metrics" id="overview">
-          <article><span>Products</span><strong id="productCount">0</strong></article>
-          <article><span>Orders</span><strong id="orderCount">0</strong></article>
-          <article><span>Awaiting Action</span><strong id="pendingCount">0</strong></article>
-          <article><span>Paid Instantly</span><strong id="paidTotal">Rs 0</strong></article>
-        </section>
+        <div class="content-body">
+          <section id="overview" class="section-header">
+            <div>
+              <span class="top-kicker">Supply Operations</span>
+              <h2>Dashboard Overview</h2>
+              <p id="accountStatus">Checking wholesaler status</p>
+            </div>
+            <div class="attention-pill"><strong id="attentionCount">0</strong> need action</div>
+          </section>
 
-        <section class="panel" id="orders">
+          <section class="stats-grid">
+            <article class="stat-card"><span class="stat-icon blue">W</span><div><h3>Wholesale Products</h3><p id="productCount">0</p></div></article>
+            <article class="stat-card"><span class="stat-icon green">O</span><div><h3>Seller Orders</h3><p id="orderCount">0</p></div></article>
+            <article class="stat-card"><span class="stat-icon yellow">!</span><div><h3>Awaiting Action</h3><p id="pendingCount">0</p></div></article>
+            <article class="stat-card"><span class="stat-icon green">Rs</span><div><h3>Paid Instantly</h3><p id="paidTotal">Rs 0</p></div></article>
+          </section>
+
+        <section class="data-card" id="orders">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Seller Investment Requests</p>
@@ -132,7 +179,7 @@
           </div>
         </section>
 
-        <section class="panel" id="products">
+        <section class="data-card product-panel" id="products">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Supply Catalog</p>
@@ -142,7 +189,7 @@
           <div class="product-grid" id="productsList"></div>
         </section>
 
-        <section class="panel" id="add">
+        <section class="data-card create-panel" id="add">
           <div class="panel-head">
             <div>
               <p class="eyebrow">New Supply Product</p>
@@ -162,7 +209,7 @@
           </form>
         </section>
 
-        <section class="panel" id="payouts">
+        <section class="data-card payout-panel" id="payouts">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Payments</p>
@@ -177,7 +224,7 @@
           </div>
         </section>
 
-        <section class="panel" id="profile">
+        <section class="data-card profile-panel" id="profile">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Account</p>
@@ -186,6 +233,7 @@
           </div>
           <div class="profile-grid" id="profileGrid"></div>
         </section>
+        </div>
       </main>
     </div>
 
