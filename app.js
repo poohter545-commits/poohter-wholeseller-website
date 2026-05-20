@@ -2,6 +2,7 @@ const API_HOST = (window.EXPO_PUBLIC_API_URL || "https://api.poohter.com").repla
 const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
 const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
 const ASSET_BASE = API_BASE.replace("/api", "");
+const REQUEST_TIMEOUT_MS = 25000;
 
 const readJsonStorage = (key, fallback = null) => {
   try {
@@ -171,23 +172,40 @@ const resendOtp = async (kind) => {
   }
 };
 
+const requestTimeoutMessage = (path) => (
+  path.includes("/wholesaler/products")
+    ? "Product publish is taking too long. Please check your connection and try again."
+    : "Request is taking too long. Please try again."
+);
+
 const api = async (path, options = {}) => {
   const headers = options.headers ? { ...options.headers } : {};
   if (state.token && options.auth !== false) headers.Authorization = `Bearer ${state.token}`;
   const requestOptions = { ...options, headers };
   delete requestOptions.auth;
+  const timeoutMs = Number(requestOptions.timeoutMs) || REQUEST_TIMEOUT_MS;
+  delete requestOptions.timeoutMs;
+  const externalSignal = requestOptions.signal;
 
   for (const [index, base] of API_BASES.entries()) {
     const isLastAttempt = index === API_BASES.length - 1;
+    const controller = externalSignal ? null : new AbortController();
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
-      const response = await fetch(`${base}${path}`, requestOptions);
+      const response = await fetch(`${base}${path}`, {
+        ...requestOptions,
+        signal: externalSignal || controller.signal,
+      });
       const data = await response.json().catch(() => ({}));
       if (response.ok) return data;
       if (response.status === 404 && !isLastAttempt) continue;
       throw new Error(data.error || data.message || "Request failed");
     } catch (error) {
+      if (error.name === "AbortError") throw new Error(requestTimeoutMessage(path));
       if (!isLastAttempt && /Failed to fetch|NetworkError|Load failed/i.test(error.message || "")) continue;
       if (error.message && error.message !== "Failed to fetch") throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
   }
 
@@ -206,6 +224,12 @@ const uploadUrl = (path) => {
   if (!path) return "";
   if (String(path).startsWith("http")) return path;
   return `${ASSET_BASE}/${String(path).replace(/^uploads[\\/]/, "uploads/").replace(/\\/g, "/")}`;
+};
+
+const pruneEmptyFiles = (formData, fieldName) => {
+  const files = formData.getAll(fieldName).filter((file) => !(file instanceof File) || file.size > 0);
+  formData.delete(fieldName);
+  files.forEach((file) => formData.append(fieldName, file));
 };
 
 const translateTextToUrdu = async (text) => {
@@ -630,6 +654,7 @@ on("#productForm", "submit", async (event) => {
   const form = event.currentTarget;
   const submitButton = event.submitter || form.querySelector("button[type='submit']");
   const formData = new FormData(form);
+  pruneEmptyFiles(formData, "product_images");
   const price = Number(formData.get("wholesale_price"));
   const minOrder = Number.parseInt(formData.get("min_order_quantity"), 10);
   const stock = Number.parseInt(formData.get("available_stock"), 10);
@@ -639,13 +664,13 @@ on("#productForm", "submit", async (event) => {
   }
   if (submitButton) {
     submitButton.disabled = true;
-    submitButton.textContent = "Publishing...";
+    submitButton.textContent = "Sending for review...";
   }
   try {
-    await api("/wholesaler/products", { method: "POST", body: formData });
+    await api("/wholesaler/products", { method: "POST", body: formData, timeoutMs: 30000 });
     form.reset();
-    await loadDashboard();
     showToast("Wholesale product sent for admin review", "success");
+    loadDashboard().catch((error) => showToast(`Sent for review, but refresh failed: ${error.message}`, "error"));
   } catch (error) {
     showToast(error.message, "error");
   } finally {
