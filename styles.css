@@ -328,6 +328,10 @@ textarea {
   background: #fff;
   color: var(--text-main);
 }
+.translate-btn {
+  align-self: end;
+  width: 100%;
+}
 .mini-btn {
   min-height: 34px;
   font-size: 12px;

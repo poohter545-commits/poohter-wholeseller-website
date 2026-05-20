@@ -208,6 +208,16 @@ const uploadUrl = (path) => {
   return `${ASSET_BASE}/${String(path).replace(/^uploads[\\/]/, "uploads/").replace(/\\/g, "/")}`;
 };
 
+const translateTextToUrdu = async (text) => {
+  const cleanText = String(text || "").trim();
+  if (!cleanText) throw new Error("Enter the English product name first.");
+  const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|ur`);
+  const data = await response.json().catch(() => ({}));
+  const translated = data?.responseData?.translatedText;
+  if (!response.ok || !translated) throw new Error("Translation failed. Please type the Urdu name manually.");
+  return translated;
+};
+
 const setSession = ({ token, wholesaler }) => {
   state.token = token;
   state.wholesaler = wholesaler;
@@ -598,14 +608,33 @@ on("#resetForm", "submit", async (event) => {
 on("#signupResendOtp", "click", () => resendOtp("signup"));
 on("#resetResendOtp", "click", () => resendOtp("reset"));
 
+on("#translateProductName", "click", async (event) => {
+  const button = event.currentTarget;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Translating...";
+  try {
+    const translated = await translateTextToUrdu($("#productNameInput").value);
+    $("#productUrduNameInput").value = translated;
+    showToast("Product name translated to Urdu", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
+
 on("#productForm", "submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const submitButton = event.submitter || form.querySelector("button[type='submit']");
   const formData = new FormData(form);
-  const images = formData.getAll("product_images").filter((file) => file && file.size);
-  if (images.length < 5) {
-    showToast("Minimum 5 photos of wholesale product are required", "error");
+  const price = Number(formData.get("wholesale_price"));
+  const minOrder = Number.parseInt(formData.get("min_order_quantity"), 10);
+  const stock = Number.parseInt(formData.get("available_stock"), 10);
+  if (!Number.isFinite(price) || price <= 0 || !Number.isInteger(minOrder) || minOrder < 25 || !Number.isInteger(stock) || stock < minOrder) {
+    showToast("Price, minimum order of at least 25, and stock at least equal to minimum order are required", "error");
     return;
   }
   if (submitButton) {
@@ -616,7 +645,7 @@ on("#productForm", "submit", async (event) => {
     await api("/wholesaler/products", { method: "POST", body: formData });
     form.reset();
     await loadDashboard();
-    showToast("Wholesale product published", "success");
+    showToast("Wholesale product sent for admin review", "success");
   } catch (error) {
     showToast(error.message, "error");
   } finally {

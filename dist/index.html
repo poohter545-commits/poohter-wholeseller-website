@@ -195,16 +195,17 @@
               <p class="eyebrow">New Supply Product</p>
               <h2>Add Product For Sellers</h2>
             </div>
-            <span class="muted">Minimum order is 25 units and minimum 5 product photos are required</span>
+            <span class="muted">Price, minimum order, and stock are required. Photos are optional for admin review.</span>
           </div>
           <form class="form-grid" id="productForm">
-            <label>Product name <input name="name" required placeholder="Cotton t-shirts pack" /></label>
-            <label>Urdu name <input name="name_urdu" dir="rtl" /></label>
+            <label>Product name <input name="name" id="productNameInput" required placeholder="Cotton t-shirts pack" /></label>
+            <label>Urdu name <input name="name_urdu" id="productUrduNameInput" dir="rtl" /></label>
+            <button class="outline-btn translate-btn" id="translateProductName" type="button">Translate to Urdu</button>
             <label>Wholesale price <input name="wholesale_price" type="number" min="1" step="0.01" required /></label>
             <label>Minimum order <input name="min_order_quantity" type="number" min="25" value="25" required /></label>
             <label>Available stock <input name="available_stock" type="number" min="25" value="25" required /></label>
-            <label>Product photos <input name="product_images" type="file" accept="image/png,image/jpeg" multiple required /></label>
-            <label class="wide">Description <textarea name="description" required placeholder="Material, packing, supply condition, city, and wholesale details."></textarea></label>
+            <label>Product photos optional <input name="product_images" type="file" accept="image/png,image/jpeg" multiple /></label>
+            <label class="wide">Description optional <textarea name="description" placeholder="Material, packing, supply condition, city, and wholesale details. Admin can complete this during review."></textarea></label>
             <button class="primary-btn" type="submit">Publish Wholesale Product</button>
           </form>
         </section>
