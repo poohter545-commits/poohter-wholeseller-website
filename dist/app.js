@@ -197,7 +197,7 @@ const api = async (path, options = {}) => {
         signal: externalSignal || controller.signal,
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) return data;
+      if (response.ok) return data || {};
       if (response.status === 404 && !isLastAttempt) continue;
       throw new Error(data.error || data.message || "Request failed");
     } catch (error) {
@@ -222,8 +222,10 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character)
 }[character]));
 const uploadUrl = (path) => {
   if (!path) return "";
-  if (String(path).startsWith("http")) return path;
-  return `${ASSET_BASE}/${String(path).replace(/^uploads[\\/]/, "uploads/").replace(/\\/g, "/")}`;
+  const cleanPath = String(path).trim();
+  if (!cleanPath) return "";
+  if (/^https?:\/\//i.test(cleanPath)) return cleanPath;
+  return `${ASSET_BASE}/${cleanPath.replace(/\\/g, "/").replace(/^\/+/, "").replace(/^uploads\//, "uploads/")}`;
 };
 
 const pruneEmptyFiles = (formData, fieldName) => {
@@ -322,28 +324,137 @@ const wholesaleStatusLabel = (status) => {
   return labels[status] || status || "Admin review";
 };
 
-const receiptLines = (order) => [
-  `Wholesale Order: ${order.order_code}`,
-  `Generated Product ID: ${order.linked_product_uid}`,
-  `Receipt Code: ${order.linked_receipt_code}`,
-  `Product: ${order.product_name}`,
-  `Quantity: ${order.quantity}`,
+const receiptLines = (order = {}) => [
+  `Wholesale Order: ${order.order_code || order.id || "Not available"}`,
+  `Generated Product ID: ${order.linked_product_uid || "Generated after acceptance"}`,
+  `Receipt Code: ${order.linked_receipt_code || "Generated after acceptance"}`,
+  `Product: ${order.product_name || "Not available"}`,
+  `Quantity: ${order.quantity || 0}`,
   `Wholesale Unit Price: ${money(order.wholesale_unit_price)}`,
   `Total Wholesale Payment: ${money(order.total_price)}`,
-  `Seller: ${order.seller_shop || order.seller_name}`,
-  `Seller ID: ${order.seller_public_id || order.seller_id}`,
-  `Wholesaler: ${order.wholesaler_shop || order.wholesaler_name}`,
+  `Seller: ${order.seller_shop || order.seller_name || "Not available"}`,
+  `Seller ID: ${order.seller_public_id || order.seller_id || "Not available"}`,
+  `Wholesaler: ${order.wholesaler_shop || order.wholesaler_name || "Not available"}`,
   `Wholesaler Phone: ${order.wholesaler_phone || ""}`,
   "Send this physical stock to the Poohter warehouse with this receipt.",
 ];
 
+const receiptQrPayload = (order = {}) => JSON.stringify({
+  type: "poohter_wholesale_receipt",
+  order_code: order.order_code || order.id || "",
+  product_uid: order.linked_product_uid || "",
+  receipt_code: order.linked_receipt_code || "",
+  quantity: Number(order.quantity || 0),
+});
+
+const receiptQrUrl = (order = {}, size = 220) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=12&data=${encodeURIComponent(receiptQrPayload(order))}`;
+
+const receiptTableRows = (order = {}) => [
+  ["Wholesale Order", order.order_code || order.id || "Not available"],
+  ["Generated Product ID", order.linked_product_uid || "Generated after acceptance"],
+  ["Receipt Code", order.linked_receipt_code || "Generated after acceptance"],
+  ["Product", order.product_name || "Not available"],
+  ["Quantity", order.quantity || 0],
+  ["Wholesale Unit Price", money(order.wholesale_unit_price)],
+  ["Total Wholesale Payment", money(order.total_price)],
+  ["Seller", order.seller_shop || order.seller_name || "Not available"],
+  ["Seller ID", order.seller_public_id || order.seller_id || "Not available"],
+  ["Wholesaler", order.wholesaler_shop || order.wholesaler_name || "Not available"],
+  ["Wholesaler Phone", order.wholesaler_phone || ""],
+];
+
+const receiptHtml = (order = {}) => {
+  const receiptCode = order.linked_receipt_code || order.order_code || "wholesale-receipt";
+  const productUid = order.linked_product_uid || "Generated after acceptance";
+  const printedAt = new Date().toLocaleString();
+  const rows = receiptTableRows(order).map(([label, value]) => `
+    <tr>
+      <th>${escapeHtml(label)}</th>
+      <td>${escapeHtml(value)}</td>
+    </tr>
+  `).join("");
+
+  return `<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>${escapeHtml(receiptCode)}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 28px; background: #f3f4f6; color: #111827; font-family: Arial, Helvetica, sans-serif; }
+        .receipt { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 18px; overflow: hidden; }
+        .top { display: flex; justify-content: space-between; gap: 20px; padding: 28px 32px; background: #0f4e63; color: #fff; border-bottom: 10px solid #f59e0b; }
+        .brand { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
+        .subtitle { margin-top: 4px; color: #dbeafe; font-size: 14px; font-weight: 700; }
+        .status { align-self: flex-start; background: #ecfdf5; color: #047857; border-radius: 999px; padding: 10px 14px; font-size: 12px; font-weight: 900; }
+        .hero { display: flex; justify-content: space-between; gap: 28px; padding: 28px 32px; border-bottom: 1px solid #e5e7eb; }
+        .label { color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 900; margin-bottom: 6px; }
+        .code { font-size: 28px; font-weight: 900; margin-bottom: 20px; }
+        .uid { font-size: 22px; font-weight: 900; color: #0f766e; }
+        .qr { text-align: center; min-width: 190px; border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px; background: #fff; }
+        .qr img { width: 160px; height: 160px; display: block; }
+        .qr span { display: block; margin-top: 8px; color: #64748b; font-size: 11px; font-weight: 800; }
+        .instruction { margin: 24px 32px; padding: 16px; border-radius: 14px; background: #eff6ff; color: #1d4ed8; font-weight: 800; }
+        table { width: calc(100% - 64px); margin: 0 32px 28px; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #e5e7eb; padding: 12px; text-align: left; font-size: 13px; }
+        th { width: 38%; color: #0f4e63; background: #f8fafc; font-weight: 900; }
+        td { color: #334155; font-weight: 700; }
+        .footer { padding: 0 32px 28px; color: #64748b; font-size: 12px; }
+        @media print {
+          body { background: #fff; padding: 0; }
+          .receipt { border-radius: 0; border: 0; max-width: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <main class="receipt">
+        <section class="top">
+          <div>
+            <div class="brand">POOHTER</div>
+            <div class="subtitle">Wholesale warehouse receipt</div>
+          </div>
+          <div class="status">WAREHOUSE HANDOFF</div>
+        </section>
+        <section class="hero">
+          <div>
+            <div class="label">Receipt code</div>
+            <div class="code">${escapeHtml(receiptCode)}</div>
+            <div class="label">Generated product ID</div>
+            <div class="uid">${escapeHtml(productUid)}</div>
+          </div>
+          <div class="qr">
+            <img src="${receiptQrUrl(order)}" alt="Receipt QR code" />
+            <span>Scan at warehouse</span>
+          </div>
+        </section>
+        <div class="instruction">Send this physical stock to the Poohter warehouse with this receipt attached.</div>
+        <table><tbody>${rows}</tbody></table>
+        <div class="footer">Printed: ${escapeHtml(printedAt)}. The QR code contains the wholesale order, generated product ID, receipt code, and quantity.</div>
+      </main>
+      <script>window.addEventListener("load", () => setTimeout(() => window.print(), 500));</script>
+    </body>
+  </html>`;
+};
+
+const printReceipt = (order = {}) => {
+  const popup = window.open("", "_blank", "width=900,height=900");
+  if (!popup) {
+    showToast("Allow popups to print the warehouse receipt", "error");
+    return;
+  }
+  popup.document.open();
+  popup.document.write(receiptHtml(order));
+  popup.document.close();
+};
+
 const downloadReceipt = (orderId) => {
-  const order = state.orders.find((item) => String(item.id) === String(orderId));
-  if (!order?.linked_receipt_code) {
+  const order = state.orders.find((item) => String(item.id) === String(orderId) || String(item.order_code) === String(orderId));
+  if (!order) {
     showToast("Receipt is available after accepting an admin-approved order", "error");
     return;
   }
-  downloadPdf(`${order.linked_receipt_code}.pdf`, "POOHTER WHOLESALE WAREHOUSE RECEIPT", receiptLines(order));
+  printReceipt(order);
 };
 
 const renderProfile = () => {
@@ -414,6 +525,13 @@ const renderProducts = () => {
         })
         .join("")
     : `<div class="empty">No wholesale products yet. Add your first supply product below.</div>`;
+  document.querySelectorAll(".product-media img").forEach((image) => {
+    image.addEventListener("error", () => {
+      const fallback = document.createElement("span");
+      fallback.textContent = "W";
+      image.replaceWith(fallback);
+    }, { once: true });
+  });
 };
 
 const renderOrders = () => {
@@ -658,8 +776,8 @@ on("#productForm", "submit", async (event) => {
   const price = Number(formData.get("wholesale_price"));
   const minOrder = Number.parseInt(formData.get("min_order_quantity"), 10);
   const stock = Number.parseInt(formData.get("available_stock"), 10);
-  if (!Number.isFinite(price) || price <= 0 || !Number.isInteger(minOrder) || minOrder < 25 || !Number.isInteger(stock) || stock < minOrder) {
-    showToast("Price, minimum order of at least 25, and stock at least equal to minimum order are required", "error");
+  if (!Number.isFinite(price) || price <= 0 || !Number.isInteger(minOrder) || minOrder < 1 || !Number.isInteger(stock) || stock < minOrder) {
+    showToast("Price, a positive minimum order, and stock at least equal to minimum order are required", "error");
     return;
   }
   if (submitButton) {
@@ -676,7 +794,7 @@ on("#productForm", "submit", async (event) => {
   } finally {
     if (submitButton) {
       submitButton.disabled = false;
-      submitButton.textContent = "Publish Wholesale Product";
+      submitButton.textContent = "Submit For Admin Review";
     }
   }
 });
@@ -698,10 +816,13 @@ on("#ordersList", "click", async (event) => {
   try {
     if (accept) {
       const result = await api(`/wholesaler/orders/${id}/accept`, { method: "POST" });
-      if (result.order?.linked_receipt_code) {
-        state.orders = state.orders.map((order) => String(order.id) === String(id) ? result.order : order);
-        downloadPdf(`${result.order.linked_receipt_code}.pdf`, "POOHTER WHOLESALE WAREHOUSE RECEIPT", result.receipt_lines || receiptLines(result.order));
-      }
+      const existingOrder = state.orders.find((order) => String(order.id) === String(id) || String(order.order_code) === String(id));
+      const acceptedOrder = {
+        ...(existingOrder || {}),
+        ...((result?.order && typeof result.order === "object") ? result.order : {}),
+      };
+      state.orders = state.orders.map((order) => String(order.id) === String(id) || String(order.order_code) === String(id) ? acceptedOrder : order);
+      printReceipt(acceptedOrder);
       await loadDashboard();
       showToast("Order accepted and paid instantly", "success");
     } else {
@@ -767,6 +888,32 @@ document.querySelectorAll(".nav a").forEach((link) => {
   });
 });
 
+function mountPoohterContactWidget() {
+  const mount = document.querySelector(".poohter-contact-widget");
+  if (!mount || mount.dataset.ready === "true") return;
+  mount.dataset.ready = "true";
+  const accountType = mount.dataset.accountType || window.POOHTER_ACCOUNT_TYPE || "wholesaler";
+  const phoneNumber = window.POOHTER_WHATSAPP_NUMBER || "923000000000";
+  const whatsappText = encodeURIComponent(`Hello Poohter, I need help with my ${accountType} account.`);
+  mount.innerHTML = `
+    <style>.poohter-contact-widget{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}.poohter-contact-widget button,.poohter-contact-widget a{border:0;border-radius:8px;min-height:44px;padding:0 14px;font:inherit;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 12px 24px rgba(15,23,42,.18);cursor:pointer}.poohter-contact-widget .call-btn{background:#0f172a;color:#fff}.poohter-contact-widget .wa-btn{background:#16a34a;color:#fff}.poohter-contact-form{position:fixed;right:18px;bottom:76px;width:min(340px,calc(100vw - 36px));background:#fff;border:1px solid #dbe3ef;border-radius:8px;padding:14px;box-shadow:0 20px 48px rgba(15,23,42,.2);display:none;gap:10px}.poohter-contact-form.open{display:grid}.poohter-contact-form input,.poohter-contact-form textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;font:inherit}.poohter-contact-form textarea{min-height:74px;resize:vertical}.poohter-contact-form .form-row{display:flex;gap:8px}@media(max-width:560px){.poohter-contact-widget{left:12px;right:12px}.poohter-contact-widget button,.poohter-contact-widget a{flex:1;justify-content:center}.poohter-contact-form{left:12px;right:12px;width:auto}}</style>
+    <form class="poohter-contact-form"><input name="phone" placeholder="03XXXXXXXXX" required /><textarea name="message" placeholder="Message optional"></textarea><div class="form-row"><button class="call-btn" type="submit">Send Request</button><button class="call-btn" type="button" data-close-contact>Close</button></div></form>
+    <button class="call-btn" type="button" data-open-contact>Request Call</button><a class="wa-btn" href="https://wa.me/${phoneNumber}?text=${whatsappText}" target="_blank" rel="noreferrer">WhatsApp</a>`;
+  const form = mount.querySelector(".poohter-contact-form");
+  mount.querySelector("[data-open-contact]").addEventListener("click", () => form.classList.toggle("open"));
+  mount.querySelector("[data-close-contact]").addEventListener("click", () => form.classList.remove("open"));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/support/request-call`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: form.phone.value, message: form.message.value, account_type: accountType, source: "website", name: state?.wholesaler?.name || "" }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Could not send request");
+      form.reset(); form.classList.remove("open"); showToast("Call request sent.", "success");
+    } catch (error) { showToast(error.message, "error"); }
+  });
+}
+
+mountPoohterContactWidget();
 setSignupStep(1);
 showApp(Boolean(state.token));
 if (state.token) loadDashboard();
