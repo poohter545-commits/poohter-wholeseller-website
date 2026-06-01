@@ -762,3 +762,93 @@ td span {
   }
   .wide { grid-column: auto; }
 }
+.auth-screen {
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.15), transparent 34%),
+    linear-gradient(135deg, #f8fafc 0%, #eef6f4 48%, #fff7ed 100%);
+}
+
+.brand-header p::after,
+.side-brand::after {
+  content: "A Trust Where Quality Matters";
+  display: block;
+  margin-top: 4px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.auth-card,
+.data-card,
+.stat-card {
+  border: 1px solid rgba(15, 78, 99, 0.12);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+}
+
+.primary-btn,
+.primary-link {
+  background: linear-gradient(135deg, #0f766e, #0f4e63);
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.18);
+}
+
+.outline-btn,
+.mini-btn {
+  border-color: rgba(15, 118, 110, 0.28);
+}
+
+.section-header,
+.topbar {
+  border: 1px solid rgba(15, 78, 99, 0.1);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.cnic-update-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+
+.cnic-update-form h3,
+.cnic-update-form p {
+  margin: 0;
+}
+
+.cnic-update-form h3 {
+  color: #92400e;
+}
+
+.cnic-update-form p {
+  color: #78350f;
+  font-weight: 800;
+}
+
+.cnic-update-form label {
+  display: grid;
+  gap: 8px;
+  color: #78350f;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .topbar,
+  .section-header,
+  .panel-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .top-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .top-actions .outline-btn,
+  .top-actions .primary-link {
+    flex: 1;
+    text-align: center;
+  }
+}

@@ -342,8 +342,12 @@ const receiptLines = (order = {}) => [
 const receiptQrPayload = (order = {}) => JSON.stringify({
   type: "poohter_wholesale_receipt",
   order_code: order.order_code || order.id || "",
+  order_id: order.id || "",
+  wholesale_order_id: order.id || "",
   product_uid: order.linked_product_uid || "",
+  product_id: order.linked_product_id || "",
   receipt_code: order.linked_receipt_code || "",
+  receipt_id: order.linked_receipt_code || "",
   quantity: Number(order.quantity || 0),
 });
 
@@ -432,20 +436,8 @@ const receiptHtml = (order = {}) => {
         <table><tbody>${rows}</tbody></table>
         <div class="footer">Printed: ${escapeHtml(printedAt)}. The QR code contains the wholesale order, generated product ID, receipt code, and quantity.</div>
       </main>
-      <script>window.addEventListener("load", () => setTimeout(() => window.print(), 500));</script>
     </body>
   </html>`;
-};
-
-const printReceipt = (order = {}) => {
-  const popup = window.open("", "_blank", "width=900,height=900");
-  if (!popup) {
-    showToast("Allow popups to print the warehouse receipt", "error");
-    return;
-  }
-  popup.document.open();
-  popup.document.write(receiptHtml(order));
-  popup.document.close();
 };
 
 const downloadReceipt = (orderId) => {
@@ -454,7 +446,13 @@ const downloadReceipt = (orderId) => {
     showToast("Receipt is available after accepting an admin-approved order", "error");
     return;
   }
-  printReceipt(order);
+  downloadPdf(`${order.linked_receipt_code || order.order_code || "wholesale-receipt"}.pdf`, "Poohter Wholesale Warehouse Receipt", [
+    "A Trust Where Quality Matters",
+    ...receiptLines(order),
+    `Generated: ${new Date().toLocaleString()}`,
+    `QR Payload: ${receiptQrPayload(order)}`,
+  ]);
+  showToast("Receipt PDF downloaded", "success");
 };
 
 const renderProfile = () => {
@@ -464,6 +462,11 @@ const renderProfile = () => {
   $("#accountStatus").textContent = profile.status
     ? `Account status: ${String(profile.status).replace(/_/g, " ")}`
     : "Wholesaler profile connected";
+  if (profile.cnic_update_status === "requested" || profile.cnic_update_status === "rejected") {
+    $("#accountStatus").textContent = "Account status: CNIC update required";
+  } else if (profile.cnic_update_status === "uploaded") {
+    $("#accountStatus").textContent = "Account status: CNIC update waiting for admin review";
+  }
   $("#wholesalerAvatar").textContent = (profile.shop_name || profile.name || "P").charAt(0).toUpperCase();
   const fields = [
     ["Owner", profile.name],
@@ -477,10 +480,25 @@ const renderProfile = () => {
     ["Account", profile.account_title || profile.account_number],
     ["Wallet", profile.mobile_wallet],
     ["Status", profile.status],
+    ["CNIC Update", cnicUpdateLabel(profile)],
   ];
   $("#profileGrid").innerHTML = fields
     .map(([label, value]) => `<div class="profile-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not provided")}</strong></div>`)
     .join("");
+  const form = $("#cnicUpdateForm");
+  if (form) {
+    const required = ["requested", "rejected"].includes(profile.cnic_update_status);
+    form.classList.toggle("hidden", !required);
+    $("#cnicUpdateMessage").textContent = profile.cnic_update_rejection_reason || profile.cnic_update_note || "Upload clear front and back CNIC images for admin review.";
+  }
+};
+
+const cnicUpdateLabel = (profile = {}) => {
+  if (profile.cnic_update_status === "requested") return "CNIC update required";
+  if (profile.cnic_update_status === "uploaded") return "Uploaded, waiting for admin review";
+  if (profile.cnic_update_status === "rejected") return `Rejected - ${profile.cnic_update_rejection_reason || "upload again"}`;
+  if (profile.cnic_update_status === "approved") return "Latest update approved";
+  return "Clear";
 };
 
 const renderMetrics = () => {
@@ -767,6 +785,20 @@ on("#translateProductName", "click", async (event) => {
   }
 });
 
+on("#cnicUpdateForm", "submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+  try {
+    const data = await api("/wholesaler/cnic-update", { method: "POST", body: formData });
+    form.reset();
+    await loadDashboard();
+    showToast(data.message || "CNIC images uploaded for admin review", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+});
+
 on("#productForm", "submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -822,9 +854,9 @@ on("#ordersList", "click", async (event) => {
         ...((result?.order && typeof result.order === "object") ? result.order : {}),
       };
       state.orders = state.orders.map((order) => String(order.id) === String(id) || String(order.order_code) === String(id) ? acceptedOrder : order);
-      printReceipt(acceptedOrder);
+      downloadReceipt(acceptedOrder.id || acceptedOrder.order_code);
       await loadDashboard();
-      showToast("Order accepted and paid instantly", "success");
+      showToast("Order accepted and receipt PDF downloaded", "success");
     } else {
       await api(`/wholesaler/orders/${id}/reject`, {
         method: "POST",

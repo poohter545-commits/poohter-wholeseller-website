@@ -233,6 +233,15 @@
             </div>
           </div>
           <div class="profile-grid" id="profileGrid"></div>
+          <form class="cnic-update-form hidden" id="cnicUpdateForm">
+            <div>
+              <h3>CNIC update required</h3>
+              <p id="cnicUpdateMessage">Upload clear front and back CNIC images for admin review.</p>
+            </div>
+            <label>New CNIC front <input name="cnic_front" type="file" accept="image/png,image/jpeg" required /></label>
+            <label>New CNIC back <input name="cnic_back" type="file" accept="image/png,image/jpeg" required /></label>
+            <button class="primary-btn" type="submit">Upload CNIC For Review</button>
+          </form>
         </section>
         </div>
       </main>
