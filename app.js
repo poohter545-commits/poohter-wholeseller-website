@@ -3,6 +3,7 @@ const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
 const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
 const ASSET_BASE = API_BASE.replace("/api", "");
 const REQUEST_TIMEOUT_MS = 25000;
+const SIGNUP_REQUEST_TIMEOUT_MS = 90000;
 
 const readJsonStorage = (key, fallback = null) => {
   try {
@@ -39,6 +40,36 @@ const showToast = (message, type = "") => {
   toast.className = `toast show ${type}`;
   setTimeout(() => (toast.className = "toast"), 3200);
 };
+
+const eyeIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>`;
+const eyeOffIcon = `
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+    <path d="m3 3 18 18"></path>
+    <path d="M10.6 10.6A2 2 0 0 0 13.4 13.4"></path>
+    <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.4 18.4 0 0 1-3.1 4.1"></path>
+    <path d="M6.6 6.8C3.6 8.8 2 12 2 12s3.5 7 10 7c1.3 0 2.5-.3 3.6-.7"></path>
+  </svg>`;
+
+const updatePasswordToggle = (button, visible = false) => {
+  button.innerHTML = visible ? eyeOffIcon : eyeIcon;
+  button.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+};
+
+document.querySelectorAll("[data-toggle-password]").forEach((button) => updatePasswordToggle(button));
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-toggle-password]");
+  if (!button) return;
+  const input = button.closest(".password-input")?.querySelector('input[type="password"], input[type="text"]');
+  if (!input) return;
+  const shouldShow = input.type === "password";
+  input.type = shouldShow ? "text" : "password";
+  updatePasswordToggle(button, shouldShow);
+});
 
 const showSignupAlert = (type, title, message) => {
   const alert = $("#signupAlert");
@@ -103,13 +134,20 @@ const validateSignupStep = () => {
 const setSignupOtpMode = (enabled) => {
   const wasEnabled = state.signupOtpPending;
   state.signupOtpPending = enabled;
-  $("#signupOtpPanel").classList.toggle("hidden", !enabled);
-  const otpInput = $("#signupOtpPanel input[name='otp']");
+  const otpPanel = $("#signupOtpPanel");
+  otpPanel.classList.toggle("hidden", !enabled);
+  const otpInput = otpPanel.querySelector("input[name='otp']");
   if (otpInput) otpInput.required = enabled;
   if (enabled) setSignupStep(4);
   if (enabled && !wasEnabled) startOtpCooldown("signup");
   $("#signupSubmit").textContent = enabled ? "Verify Email & Submit" : "Submit For Admin Approval";
   setSignupStep(state.signupStep);
+  if (enabled) {
+    window.setTimeout(() => {
+      otpPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+      otpInput?.focus();
+    }, 80);
+  }
 };
 
 const setResetOtpMode = (enabled) => {
@@ -173,9 +211,11 @@ const resendOtp = async (kind) => {
 };
 
 const requestTimeoutMessage = (path) => (
-  path.includes("/wholesaler/products")
-    ? "Product publish is taking too long. Please check your connection and try again."
-    : "Request is taking too long. Please try again."
+  path.includes("/wholesaler/register")
+    ? "Registration is still sending your OTP. Please check your connection and try again in a moment."
+    : path.includes("/wholesaler/products")
+      ? "Product publish is taking too long. Please check your connection and try again."
+      : "Request is taking too long. Please try again."
 );
 
 const api = async (path, options = {}) => {
@@ -224,8 +264,16 @@ const uploadUrl = (path) => {
   if (!path) return "";
   const cleanPath = String(path).trim();
   if (!cleanPath) return "";
-  if (/^https?:\/\//i.test(cleanPath)) return cleanPath;
-  return `${ASSET_BASE}/${cleanPath.replace(/\\/g, "/").replace(/^\/+/, "").replace(/^uploads\//, "uploads/")}`;
+  if (/^(data:|blob:)/i.test(cleanPath)) return cleanPath;
+  if (/^https?:\/\//i.test(cleanPath)) {
+    try {
+      const url = new URL(cleanPath);
+      if (/\/api\/media$/i.test(url.pathname)) return cleanPath;
+    } catch {
+      return cleanPath;
+    }
+  }
+  return `${API_BASE}/media?src=${encodeURIComponent(cleanPath.replace(/\\/g, "/").replace(/^\/+/, ""))}`;
 };
 
 const pruneEmptyFiles = (formData, fieldName) => {
@@ -676,7 +724,7 @@ on("#signupForm", "submit", async (event) => {
   const submitButton = $("#signupSubmit");
   const originalText = submitButton.textContent;
   submitButton.disabled = true;
-  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP...";
+  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP, please wait...";
   const formData = new FormData(form);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
@@ -685,13 +733,19 @@ on("#signupForm", "submit", async (event) => {
       ? await api("/wholesaler/register/verify", {
         method: "POST",
         auth: false,
+        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.get("email"),
           otp: formData.get("otp"),
         }),
       })
-      : await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
+      : await api("/wholesaler/register", {
+        method: "POST",
+        auth: false,
+        body: formData,
+        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
+      });
     if (result.requiresOtp) {
       setSignupOtpMode(true);
       state.otpResends.signup = 0;

@@ -239,10 +239,15 @@ a { color: inherit; text-decoration: none; }
 .otp-panel {
   display: grid;
   gap: 12px;
-  padding: 14px;
-  border: 1px solid #bfdbfe;
+  padding: 16px;
+  border: 2px solid #2563eb;
   border-radius: 8px;
   background: #eff6ff;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.16);
+}
+.otp-title {
+  color: #1d4ed8;
+  font-size: 16px;
 }
 .otp-panel p {
   margin: 0;
@@ -285,6 +290,35 @@ input:focus, textarea:focus, select:focus {
 }
 input, select { min-height: 46px; padding: 0 13px; }
 input[type="file"] { padding: 10px 12px; }
+.password-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: stretch;
+}
+.password-input input {
+  border-radius: 10px 0 0 10px;
+}
+.password-toggle {
+  min-height: 46px;
+  border: 1.5px solid var(--border);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: #fbfdff;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.password-toggle:focus {
+  outline: 0;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+}
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
 textarea {
   min-height: 116px;
   padding: 12px 13px;

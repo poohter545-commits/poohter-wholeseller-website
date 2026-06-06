@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260519-wholesaler-ui" />
+    <link rel="stylesheet" href="styles.css?v=20260606-signup-otp" />
     <script src="env.js"></script>
   </head>
   <body>
@@ -32,7 +32,7 @@
           <h1>Wholesaler Sign In</h1>
           <p>Upload wholesale supply products and respond to seller investment requests.</p>
           <label>Email <input name="email" type="email" required autocomplete="email" placeholder="wholesale@poohter.local" /></label>
-          <label>Password <input name="password" type="password" required autocomplete="current-password" placeholder="Password" /></label>
+          <label>Password <span class="password-input"><input name="password" type="password" required autocomplete="current-password" placeholder="Password" /><button class="password-toggle" type="button" aria-label="Show password" data-toggle-password></button></span></label>
           <button class="text-link" id="forgotPassword" type="button">Forgot password?</button>
           <button class="primary-btn" type="submit">Open Dashboard</button>
         </form>
@@ -44,8 +44,8 @@
           <div class="otp-panel hidden" id="resetOtpPanel">
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
             <button class="resend-otp-btn" id="resetResendOtp" type="button" disabled>Resend OTP in 60s</button>
-            <label>New password <input name="password" type="password" minlength="6" /></label>
-            <label>Confirm password <input name="confirmPassword" type="password" minlength="6" /></label>
+            <label>New password <span class="password-input"><input name="password" type="password" minlength="6" /><button class="password-toggle" type="button" aria-label="Show password" data-toggle-password></button></span></label>
+            <label>Confirm password <span class="password-input"><input name="confirmPassword" type="password" minlength="6" /><button class="password-toggle" type="button" aria-label="Show password" data-toggle-password></button></span></label>
           </div>
           <div class="signup-actions">
             <button class="outline-btn" id="resetBack" type="button">Back</button>
@@ -68,8 +68,8 @@
             <div class="form-grid compact">
               <label>Owner name <input name="name" required autocomplete="name" /></label>
               <label>Email <input name="email" type="email" required autocomplete="email" /></label>
-              <label>Password <input name="password" type="password" required autocomplete="new-password" /></label>
-              <label>Confirm password <input name="confirmPassword" type="password" required autocomplete="new-password" /></label>
+              <label>Password <span class="password-input"><input name="password" type="password" required autocomplete="new-password" /><button class="password-toggle" type="button" aria-label="Show password" data-toggle-password></button></span></label>
+              <label>Confirm password <span class="password-input"><input name="confirmPassword" type="password" required autocomplete="new-password" /><button class="password-toggle" type="button" aria-label="Show password" data-toggle-password></button></span></label>
               <label>Phone <input name="phone" required autocomplete="tel" /></label>
             </div>
           </div>
@@ -101,6 +101,7 @@
           </div>
 
           <div class="otp-panel hidden" id="signupOtpPanel">
+            <strong class="otp-title">Enter the email OTP</strong>
             <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
             <p>Check your wholesaler email and enter the code to submit this application.</p>
             <button class="resend-otp-btn" id="signupResendOtp" type="button" disabled>Resend OTP in 60s</button>
@@ -252,6 +253,6 @@
       window.POOHTER_ACCOUNT_TYPE = "wholesaler";
       window.POOHTER_WHATSAPP_NUMBER = window.POOHTER_WHATSAPP_NUMBER || "923000000000";
     </script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260606-signup-otp"></script>
   </body>
 </html>
