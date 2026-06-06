@@ -1,6 +1,7 @@
 const API_HOST = (window.EXPO_PUBLIC_API_URL || "https://api.poohter.com").replace(/\/+$/, "");
 const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
-const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
+const SAME_ORIGIN_API_BASE = window.location.protocol.startsWith("http") ? `${window.location.origin}/api` : "";
+const API_BASES = [...new Set([SAME_ORIGIN_API_BASE, API_BASE, "https://api.poohter.com/api"].filter(Boolean))];
 const ASSET_BASE = API_BASE.replace("/api", "");
 const REQUEST_TIMEOUT_MS = 25000;
 const SIGNUP_REQUEST_TIMEOUT_MS = 90000;
