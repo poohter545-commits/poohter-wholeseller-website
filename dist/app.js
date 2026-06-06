@@ -1,10 +1,10 @@
 const API_HOST = (window.EXPO_PUBLIC_API_URL || "https://api.poohter.com").replace(/\/+$/, "");
 const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
-const SAME_ORIGIN_API_BASE = window.location.protocol.startsWith("http") ? `${window.location.origin}/api` : "";
-const API_BASES = [...new Set([SAME_ORIGIN_API_BASE, API_BASE, "https://api.poohter.com/api"].filter(Boolean))];
+const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
 const ASSET_BASE = API_BASE.replace("/api", "");
 const REQUEST_TIMEOUT_MS = 25000;
 const SIGNUP_REQUEST_TIMEOUT_MS = 90000;
+const SIGNUP_MAX_FILE_BYTES = 5.5 * 1024 * 1024;
 
 const readJsonStorage = (key, fallback = null) => {
   try {
@@ -241,6 +241,15 @@ const pruneEmptyFiles = (formData, fieldName) => {
   const files = formData.getAll(fieldName).filter((file) => !(file instanceof File) || file.size > 0);
   formData.delete(fieldName);
   files.forEach((file) => formData.append(fieldName, file));
+};
+
+const validateSignupUploads = (formData) => {
+  for (const fieldName of ["cnic_front", "cnic_back"]) {
+    const file = formData.get(fieldName);
+    if (file instanceof File && file.size > SIGNUP_MAX_FILE_BYTES) {
+      throw new Error("CNIC images must be under 5.5 MB each. Please upload smaller images or submit without CNIC images for now.");
+    }
+  }
 };
 
 const translateTextToUrdu = async (text) => {
@@ -556,6 +565,7 @@ on("#signupForm", "submit", async (event) => {
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
+    validateSignupUploads(formData);
     const result = state.signupOtpPending
       ? await api("/wholesaler/register/verify", {
         method: "POST",
