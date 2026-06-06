@@ -3,6 +3,7 @@ const API_BASE = API_HOST.endsWith("/api") ? API_HOST : `${API_HOST}/api`;
 const API_BASES = [...new Set([API_BASE, "https://api.poohter.com/api"])];
 const ASSET_BASE = API_BASE.replace("/api", "");
 const REQUEST_TIMEOUT_MS = 25000;
+const SIGNUP_REQUEST_TIMEOUT_MS = 90000;
 
 const readJsonStorage = (key, fallback = null) => {
   try {
@@ -103,13 +104,20 @@ const validateSignupStep = () => {
 const setSignupOtpMode = (enabled) => {
   const wasEnabled = state.signupOtpPending;
   state.signupOtpPending = enabled;
-  $("#signupOtpPanel").classList.toggle("hidden", !enabled);
-  const otpInput = $("#signupOtpPanel input[name='otp']");
+  const otpPanel = $("#signupOtpPanel");
+  otpPanel.classList.toggle("hidden", !enabled);
+  const otpInput = otpPanel.querySelector("input[name='otp']");
   if (otpInput) otpInput.required = enabled;
   if (enabled) setSignupStep(4);
   if (enabled && !wasEnabled) startOtpCooldown("signup");
   $("#signupSubmit").textContent = enabled ? "Verify Email & Submit" : "Submit For Admin Approval";
   setSignupStep(state.signupStep);
+  if (enabled) {
+    window.setTimeout(() => {
+      otpPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+      otpInput?.focus();
+    }, 80);
+  }
 };
 
 const setResetOtpMode = (enabled) => {
@@ -173,9 +181,11 @@ const resendOtp = async (kind) => {
 };
 
 const requestTimeoutMessage = (path) => (
-  path.includes("/wholesaler/products")
-    ? "Product publish is taking too long. Please check your connection and try again."
-    : "Request is taking too long. Please try again."
+  path.includes("/wholesaler/register")
+    ? "Registration is still sending your OTP. Please check your connection and try again in a moment."
+    : path.includes("/wholesaler/products")
+      ? "Product publish is taking too long. Please check your connection and try again."
+      : "Request is taking too long. Please try again."
 );
 
 const api = async (path, options = {}) => {
@@ -540,7 +550,7 @@ on("#signupForm", "submit", async (event) => {
   const submitButton = $("#signupSubmit");
   const originalText = submitButton.textContent;
   submitButton.disabled = true;
-  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP...";
+  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP, please wait...";
   const formData = new FormData(form);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
@@ -549,13 +559,19 @@ on("#signupForm", "submit", async (event) => {
       ? await api("/wholesaler/register/verify", {
         method: "POST",
         auth: false,
+        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.get("email"),
           otp: formData.get("otp"),
         }),
       })
-      : await api("/wholesaler/register", { method: "POST", auth: false, body: formData });
+      : await api("/wholesaler/register", {
+        method: "POST",
+        auth: false,
+        body: formData,
+        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
+      });
     if (result.requiresOtp) {
       setSignupOtpMode(true);
       state.otpResends.signup = 0;
