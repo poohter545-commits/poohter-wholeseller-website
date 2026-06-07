@@ -231,9 +231,14 @@ const updateSelectedFileList = (input) => {
     list.textContent = "No images selected";
     return;
   }
-  list.innerHTML = files
-    .map((file, index) => `<span>Image ${index + 1}: ${escapeHtml(file.name)}</span>`)
-    .join("");
+  const names = files.map((file) => file.name);
+  const joinedNames = names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  list.innerHTML = `
+    <strong>${escapeHtml(joinedNames)} ${files.length === 1 ? "image is" : "images are"} added.</strong>
+    ${files.map((file, index) => `<span>Image ${index + 1}: ${escapeHtml(file.name)} added</span>`).join("")}
+  `;
 };
 
 document.addEventListener("change", (event) => {
@@ -368,9 +373,12 @@ const renderProfile = () => {
   const profile = state.profile?.wholesaler || state.wholesaler || {};
   $("#shopTitle").textContent = profile.shop_name || profile.name || "Poohter Wholesaler";
   $("#shopSubtitle").textContent = profile.email ? `${profile.email} - ${profile.city || "Wholesale account"}` : "Connected to Poohter backend";
-  $("#accountStatus").textContent = profile.status
+  const statusText = profile.status
     ? `Account status: ${String(profile.status).replace(/_/g, " ")}`
     : "Wholesaler profile connected";
+  $("#accountStatus").textContent = statusText;
+  const topStatus = $("#topAccountStatus");
+  if (topStatus) topStatus.textContent = statusText;
   $("#wholesalerAvatar").textContent = (profile.shop_name || profile.name || "P").charAt(0).toUpperCase();
   const fields = [
     ["Owner", profile.name],

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260607-direct-signup" />
+    <link rel="stylesheet" href="styles.css?v=20260607-wholesale-seller-ui" />
     <script src="env.js"></script>
   </head>
   <body>
@@ -18,9 +18,9 @@
         <div class="brand-header">
           <div class="brand-row">
             <span class="brand-mark">P</span>
-            <span>POOHTER</span>
+            <span>Poohter Wholesaler Center</span>
           </div>
-          <p>A Trust Where Quality Matters</p>
+          <p>A Trust Where Quality Matters.</p>
         </div>
 
         <div class="mode-switch" role="tablist" aria-label="Authentication mode">
@@ -30,9 +30,10 @@
 
         <form class="auth-form" id="loginForm">
           <h1>Wholesaler Sign In</h1>
-          <p>Upload wholesale supply products and respond to seller investment requests.</p>
-          <label>Email <input name="email" type="email" required autocomplete="email" placeholder="wholesale@poohter.local" /></label>
-          <label>Password <input name="password" type="password" required autocomplete="current-password" placeholder="Password" /></label>
+          <p>Sign in to manage supply products, seller requests, and payouts.</p>
+          <div class="auth-note">Approved wholesaler accounts can access the dashboard. New applications stay locked until admin approval.</div>
+          <label>Work Email <input name="email" type="email" required autocomplete="email" placeholder="wholesale@shop.com" /></label>
+          <label>Password <input name="password" type="password" required autocomplete="current-password" placeholder="Enter your password" /></label>
           <button class="text-link" id="forgotPassword" type="button">Forgot password?</button>
           <button class="primary-btn" type="submit">Open Dashboard</button>
         </form>
@@ -113,15 +114,16 @@
       <aside class="sidebar">
         <a class="side-brand" href="#overview">
           <span class="brand-mark">P</span>
-          <span>POOHTER</span>
+          <span>Poohter</span>
         </a>
+        <div class="side-caption">Wholesaler operations center</div>
         <nav class="nav">
-          <a class="active" href="#overview">Dashboard</a>
-          <a href="#products">My Products</a>
-          <a href="#orders">Seller Orders</a>
-          <a href="#add">Add Product</a>
-          <a href="#payouts">Payouts</a>
-          <a href="#profile">Profile</a>
+          <a class="active" href="#overview"><span class="nav-icon">D</span>Dashboard</a>
+          <a href="#products"><span class="nav-icon">P</span>My Products</a>
+          <a href="#orders"><span class="nav-icon">O</span>Seller Orders</a>
+          <a href="#add"><span class="nav-icon">+</span>Add Product</a>
+          <a href="#payouts"><span class="nav-icon">Rs</span>Payouts</a>
+          <a href="#profile"><span class="nav-icon">A</span>Profile</a>
         </nav>
         <button class="logout" id="logoutBtn" type="button">Logout</button>
       </aside>
@@ -132,6 +134,7 @@
             <span class="top-kicker">Wholesaler Center</span>
             <h1 id="shopTitle">Wholesaler dashboard</h1>
             <p id="shopSubtitle">Connected to Poohter backend</p>
+            <span class="top-status" id="topAccountStatus">Checking account status</span>
           </div>
           <div class="top-actions">
             <button class="outline-btn" id="refreshBtn" type="button">Refresh</button>
@@ -236,6 +239,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=20260607-direct-signup"></script>
+    <script src="app.js?v=20260607-wholesale-seller-ui"></script>
   </body>
 </html>
