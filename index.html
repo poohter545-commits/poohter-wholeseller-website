@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260606-signup-otp" />
+    <link rel="stylesheet" href="styles.css?v=20260607-direct-signup" />
     <script src="env.js"></script>
   </head>
   <body>
@@ -98,13 +98,6 @@
               <label>Account / IBAN <input name="account_number" /></label>
               <label>Mobile wallet <input name="mobile_wallet" /></label>
             </div>
-          </div>
-
-          <div class="otp-panel hidden" id="signupOtpPanel">
-            <strong class="otp-title">Enter the email OTP</strong>
-            <label>Email OTP <input name="otp" inputmode="numeric" maxlength="6" placeholder="6 digit code" /></label>
-            <p>Check your wholesaler email and enter the code to submit this application.</p>
-            <button class="resend-otp-btn" id="signupResendOtp" type="button" disabled>Resend OTP in 60s</button>
           </div>
 
           <div class="signup-actions">
@@ -205,7 +198,11 @@
             <label>Wholesale price <input name="wholesale_price" type="number" min="1" step="0.01" required /></label>
             <label>Minimum order <input name="min_order_quantity" type="number" min="25" value="25" required /></label>
             <label>Available stock <input name="available_stock" type="number" min="25" value="25" required /></label>
-            <label>Product photos optional <input name="product_images" type="file" accept="image/png,image/jpeg" multiple /></label>
+            <label class="wide">Product photos optional
+              <input name="product_images" type="file" accept="image/png,image/jpeg" multiple data-file-list="wholesaleProductImages" />
+              <span class="file-help">JPG or PNG images, up to 8 files.</span>
+              <span class="selected-files" id="wholesaleProductImages">No images selected</span>
+            </label>
             <label class="wide">Description optional <textarea name="description" placeholder="Material, packing, supply condition, city, and wholesale details. Admin can complete this during review."></textarea></label>
             <button class="primary-btn" type="submit">Publish Wholesale Product</button>
           </form>
@@ -239,6 +236,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=20260606-signup-otp"></script>
+    <script src="app.js?v=20260607-direct-signup"></script>
   </body>
 </html>

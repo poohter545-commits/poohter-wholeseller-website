@@ -308,6 +308,33 @@ textarea {
 }
 .wide { grid-column: span 2; }
 
+.file-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.selected-files {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.selected-files span {
+  min-width: 0;
+  padding: 7px 9px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text-main);
+}
+
 .primary-btn, .primary-link, .outline-btn, .mini-btn, .logout {
   display: inline-flex;
   min-height: 42px;

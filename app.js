@@ -23,10 +23,9 @@ const state = {
   orders: [],
   payouts: [],
   signupStep: 1,
-  signupOtpPending: false,
   resetOtpSent: false,
   otpTimers: {},
-  otpResends: { signup: 0, reset: 0 },
+  otpResends: { reset: 0 },
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -74,8 +73,8 @@ const setSignupStep = (step) => {
     pill.classList.toggle("active", pillStep === state.signupStep);
     pill.classList.toggle("completed", pillStep < state.signupStep);
   });
-  $("#signupPrev").classList.toggle("hidden", state.signupStep === 1 || state.signupOtpPending);
-  $("#signupNext").classList.toggle("hidden", state.signupStep === 4 || state.signupOtpPending);
+  $("#signupPrev").classList.toggle("hidden", state.signupStep === 1);
+  $("#signupNext").classList.toggle("hidden", state.signupStep === 4);
   $("#signupSubmit").classList.toggle("hidden", state.signupStep !== 4);
 };
 
@@ -102,25 +101,6 @@ const validateSignupStep = () => {
   return true;
 };
 
-const setSignupOtpMode = (enabled) => {
-  const wasEnabled = state.signupOtpPending;
-  state.signupOtpPending = enabled;
-  const otpPanel = $("#signupOtpPanel");
-  otpPanel.classList.toggle("hidden", !enabled);
-  const otpInput = otpPanel.querySelector("input[name='otp']");
-  if (otpInput) otpInput.required = enabled;
-  if (enabled) setSignupStep(4);
-  if (enabled && !wasEnabled) startOtpCooldown("signup");
-  $("#signupSubmit").textContent = enabled ? "Verify Email & Submit" : "Submit For Admin Approval";
-  setSignupStep(state.signupStep);
-  if (enabled) {
-    window.setTimeout(() => {
-      otpPanel.scrollIntoView({ behavior: "smooth", block: "center" });
-      otpInput?.focus();
-    }, 80);
-  }
-};
-
 const setResetOtpMode = (enabled) => {
   const wasEnabled = state.resetOtpSent;
   state.resetOtpSent = enabled;
@@ -129,11 +109,12 @@ const setResetOtpMode = (enabled) => {
   $("#resetOtpPanel").querySelectorAll("input").forEach((input) => {
     input.required = enabled;
   });
-  if (enabled && !wasEnabled) startOtpCooldown("reset");
+  if (enabled && !wasEnabled) startResetOtpCooldown();
 };
 
-const startOtpCooldown = (kind, seconds = 60) => {
-  const button = kind === "signup" ? $("#signupResendOtp") : $("#resetResendOtp");
+const startResetOtpCooldown = (seconds = 60) => {
+  const kind = "reset";
+  const button = $("#resetResendOtp");
   if (!button) return;
   clearInterval(state.otpTimers[kind]);
   let remaining = seconds;
@@ -152,13 +133,12 @@ const startOtpCooldown = (kind, seconds = 60) => {
   }, 1000);
 };
 
-const resendOtp = async (kind) => {
-  const email = kind === "signup"
-    ? $("#signupForm input[name='email']").value
-    : $("#resetForm input[name='email']").value;
+const resendResetOtp = async () => {
+  const kind = "reset";
+  const email = $("#resetForm input[name='email']").value;
   if (!email) return showToast("Enter your email before resending OTP.", "error");
   if ((state.otpResends[kind] || 0) >= 5) return showToast("OTP resend limit reached.", "error");
-  const button = kind === "signup" ? $("#signupResendOtp") : $("#resetResendOtp");
+  const button = $("#resetResendOtp");
   button.disabled = true;
   button.textContent = "Resending...";
   try {
@@ -169,21 +149,21 @@ const resendOtp = async (kind) => {
       body: JSON.stringify({
         email,
         accountType: "wholesaler",
-        purpose: kind === "signup" ? "signup" : "password_reset",
+        purpose: "password_reset",
       }),
     });
     state.otpResends[kind] = (state.otpResends[kind] || 0) + 1;
     showToast("A new OTP has been sent to your email.", "success");
-    startOtpCooldown(kind);
+    startResetOtpCooldown();
   } catch (error) {
     showToast(error.message, "error");
-    startOtpCooldown(kind, 5);
+    startResetOtpCooldown(5);
   }
 };
 
 const requestTimeoutMessage = (path) => (
   path.includes("/wholesaler/register")
-    ? "Registration is still sending your OTP. Please check your connection and try again in a moment."
+    ? "Registration is still being submitted. Please check your connection and try again in a moment."
     : path.includes("/wholesaler/products")
       ? "Product publish is taking too long. Please check your connection and try again."
       : "Request is taking too long. Please try again."
@@ -242,6 +222,24 @@ const pruneEmptyFiles = (formData, fieldName) => {
   formData.delete(fieldName);
   files.forEach((file) => formData.append(fieldName, file));
 };
+
+const updateSelectedFileList = (input) => {
+  const list = input.dataset.fileList ? $(`#${input.dataset.fileList}`) : null;
+  if (!list) return;
+  const files = Array.from(input.files || []);
+  if (!files.length) {
+    list.textContent = "No images selected";
+    return;
+  }
+  list.innerHTML = files
+    .map((file, index) => `<span>Image ${index + 1}: ${escapeHtml(file.name)}</span>`)
+    .join("");
+};
+
+document.addEventListener("change", (event) => {
+  const input = event.target.closest("input[type='file'][data-file-list]");
+  if (input) updateSelectedFileList(input);
+});
 
 const validateSignupUploads = (formData) => {
   for (const fieldName of ["cnic_front", "cnic_back"]) {
@@ -508,7 +506,6 @@ const loadDashboard = async () => {
 on("#loginMode", "click", () => showAuthMode("login"));
 
 on("#signupMode", "click", () => {
-  setSignupOtpMode(false);
   setSignupStep(1);
   showAuthMode("signup");
 });
@@ -550,48 +547,30 @@ on("#loginForm", "submit", async (event) => {
 
 on("#signupForm", "submit", async (event) => {
   event.preventDefault();
-  if (!state.signupOtpPending && state.signupStep < 4) {
+  if (state.signupStep < 4) {
     if (validateSignupStep()) setSignupStep(state.signupStep + 1);
     return;
   }
-  if (!state.signupOtpPending && !validateSignupStep()) return;
+  if (!validateSignupStep()) return;
   const form = event.currentTarget;
   hideSignupAlert();
   const submitButton = $("#signupSubmit");
   const originalText = submitButton.textContent;
   submitButton.disabled = true;
-  submitButton.textContent = state.signupOtpPending ? "Verifying..." : "Sending OTP, please wait...";
+  submitButton.textContent = "Submitting...";
   const formData = new FormData(form);
   if (!formData.get("cnic_front")?.size) formData.delete("cnic_front");
   if (!formData.get("cnic_back")?.size) formData.delete("cnic_back");
   try {
     validateSignupUploads(formData);
-    const result = state.signupOtpPending
-      ? await api("/wholesaler/register/verify", {
-        method: "POST",
-        auth: false,
-        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.get("email"),
-          otp: formData.get("otp"),
-        }),
-      })
-      : await api("/wholesaler/register", {
-        method: "POST",
-        auth: false,
-        body: formData,
-        timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
-      });
-    if (result.requiresOtp) {
-      setSignupOtpMode(true);
-      state.otpResends.signup = 0;
-      showSignupAlert("success", "Verification code sent", result.message || "Check your email for the OTP.");
-      showToast("OTP sent to your email", "success");
-      return;
-    }
+    const result = await api("/wholesaler/register", {
+      method: "POST",
+      auth: false,
+      body: formData,
+      timeoutMs: SIGNUP_REQUEST_TIMEOUT_MS,
+    });
     form.reset();
-    setSignupOtpMode(false);
+    setSignupStep(1);
     showSignupAlert(
       "success",
       "Registration submitted successfully",
@@ -604,7 +583,7 @@ on("#signupForm", "submit", async (event) => {
     showToast(message, "error");
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = state.signupOtpPending ? "Verify Email & Submit" : originalText;
+    submitButton.textContent = originalText;
   }
 });
 
@@ -656,8 +635,7 @@ on("#resetForm", "submit", async (event) => {
   }
 });
 
-on("#signupResendOtp", "click", () => resendOtp("signup"));
-on("#resetResendOtp", "click", () => resendOtp("reset"));
+on("#resetResendOtp", "click", resendResetOtp);
 
 on("#translateProductName", "click", async (event) => {
   const button = event.currentTarget;
@@ -696,6 +674,7 @@ on("#productForm", "submit", async (event) => {
   try {
     await api("/wholesaler/products", { method: "POST", body: formData, timeoutMs: 30000 });
     form.reset();
+    form.querySelectorAll("input[type='file'][data-file-list]").forEach(updateSelectedFileList);
     showToast("Wholesale product sent for admin review", "success");
     loadDashboard().catch((error) => showToast(`Sent for review, but refresh failed: ${error.message}`, "error"));
   } catch (error) {
