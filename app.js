@@ -245,6 +245,14 @@ const mergeSelectedFiles = (input) => {
   input._poohterFiles = finalFiles;
 };
 
+const setInputFiles = (input, files) => {
+  if (typeof DataTransfer === "undefined") return;
+  const transfer = new DataTransfer();
+  files.forEach((file) => transfer.items.add(file));
+  input.files = transfer.files;
+  input._poohterFiles = files;
+};
+
 const updateSelectedFileList = (input) => {
   const list = input.dataset.fileList ? $(`#${input.dataset.fileList}`) : null;
   if (!list) return;
@@ -259,7 +267,12 @@ const updateSelectedFileList = (input) => {
     : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   list.innerHTML = `
     <strong>${escapeHtml(joinedNames)} ${files.length === 1 ? "image is" : "images are"} added.</strong>
-    ${files.map((file, index) => `<span>Image ${index + 1}: ${escapeHtml(file.name)} added</span>`).join("")}
+    ${files.map((file, index) => `
+      <span class="selected-file-item">
+        <span>Image ${index + 1}: ${escapeHtml(file.name)} added</span>
+        <button type="button" data-remove-file="${index}" aria-label="Remove ${escapeHtml(file.name)}">Remove</button>
+      </span>
+    `).join("")}
   `;
 };
 
@@ -269,6 +282,19 @@ document.addEventListener("change", (event) => {
     mergeSelectedFiles(input);
     updateSelectedFileList(input);
   }
+});
+
+document.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-remove-file]");
+  if (!removeButton) return;
+  const list = removeButton.closest("[id]");
+  if (!list) return;
+  const input = document.querySelector(`input[type='file'][data-file-list='${list.id}']`);
+  if (!input) return;
+  const removeIndex = Number(removeButton.dataset.removeFile);
+  const files = Array.from(input.files || []).filter((_, index) => index !== removeIndex);
+  setInputFiles(input, files);
+  updateSelectedFileList(input);
 });
 
 const validateSignupUploads = (formData) => {
