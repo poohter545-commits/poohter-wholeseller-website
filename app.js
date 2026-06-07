@@ -223,6 +223,28 @@ const pruneEmptyFiles = (formData, fieldName) => {
   files.forEach((file) => formData.append(fieldName, file));
 };
 
+const fileKey = (file) => `${file.name}:${file.size}:${file.lastModified}`;
+
+const mergeSelectedFiles = (input) => {
+  if (input.dataset.fileKind === "video" || !input.multiple || typeof DataTransfer === "undefined") return;
+  const maxFiles = Number(input.dataset.maxFiles || 0);
+  const currentFiles = input._poohterFiles || [];
+  const nextFiles = Array.from(input.files || []);
+  const merged = [];
+  const seen = new Set();
+  [...currentFiles, ...nextFiles].forEach((file) => {
+    const key = fileKey(file);
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(file);
+  });
+  const finalFiles = maxFiles > 0 ? merged.slice(0, maxFiles) : merged;
+  const transfer = new DataTransfer();
+  finalFiles.forEach((file) => transfer.items.add(file));
+  input.files = transfer.files;
+  input._poohterFiles = finalFiles;
+};
+
 const updateSelectedFileList = (input) => {
   const list = input.dataset.fileList ? $(`#${input.dataset.fileList}`) : null;
   if (!list) return;
@@ -243,7 +265,10 @@ const updateSelectedFileList = (input) => {
 
 document.addEventListener("change", (event) => {
   const input = event.target.closest("input[type='file'][data-file-list]");
-  if (input) updateSelectedFileList(input);
+  if (input) {
+    mergeSelectedFiles(input);
+    updateSelectedFileList(input);
+  }
 });
 
 const validateSignupUploads = (formData) => {
@@ -682,7 +707,10 @@ on("#productForm", "submit", async (event) => {
   try {
     await api("/wholesaler/products", { method: "POST", body: formData, timeoutMs: 30000 });
     form.reset();
-    form.querySelectorAll("input[type='file'][data-file-list]").forEach(updateSelectedFileList);
+    form.querySelectorAll("input[type='file'][data-file-list]").forEach((input) => {
+      input._poohterFiles = [];
+      updateSelectedFileList(input);
+    });
     showToast("Wholesale product sent for admin review", "success");
     loadDashboard().catch((error) => showToast(`Sent for review, but refresh failed: ${error.message}`, "error"));
   } catch (error) {
