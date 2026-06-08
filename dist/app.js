@@ -301,7 +301,7 @@ const validateSignupUploads = (formData) => {
   for (const fieldName of ["cnic_front", "cnic_back"]) {
     const file = formData.get(fieldName);
     if (file instanceof File && file.size > SIGNUP_MAX_FILE_BYTES) {
-      throw new Error("CNIC images must be under 5.5 MB each. Please upload smaller images or submit without CNIC images for now.");
+      throw new Error("CNIC files must be under 5.5 MB each. Please upload smaller JPG, PNG, or PDF files or submit without CNIC files for now.");
     }
   }
 };
